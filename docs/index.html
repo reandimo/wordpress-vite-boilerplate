@@ -970,7 +970,7 @@ footer {
       <div class="feature-card fade-in">
         <span class="feature-icon">&#128752;</span>
         <h3 class="feature-title">Remote Sync</h3>
-        <p class="feature-desc">SSH (rsync) or FTP (lftp). Edit locally, auto-sync to any server. Like Shopify theme dev.</p>
+        <p class="feature-desc">Powered by <span style="color:var(--neon-cyan)">wp-dev-sync</span> CLI. SSH (rsync) or FTP (lftp). Edit locally, auto-sync to any server.</p>
       </div>
       <div class="feature-card fade-in">
         <span class="feature-icon">&#128221;</span>
@@ -1015,7 +1015,7 @@ footer {
         <span class="mode-pixel-icon">&#9733;</span>
         <h3 class="mode-name">Both</h3>
         <p class="mode-proto">Docker + Remote Sync</p>
-        <p class="mode-desc">Develop locally with Docker, push to staging/production with sync scripts.</p>
+        <p class="mode-desc">Develop locally with Docker, push to staging/production with wp-dev-sync.</p>
       </div>
     </div>
   </div>
@@ -1094,6 +1094,7 @@ footer {
       <span class="stack-badge">MariaDB 11</span>
       <span class="stack-badge">ACF Pro</span>
       <span class="stack-badge">FSE / Block Theme</span>
+      <span class="stack-badge">wp-dev-sync</span>
       <span class="stack-badge">rsync</span>
       <span class="stack-badge">lftp</span>
       <span class="stack-badge">Composer</span>
@@ -1142,7 +1143,7 @@ footer {
     <p class="footer-author">
       Built by <a href="https://reandimo.dev" target="_blank">Renan Diaz</a> &mdash; reandimo.dev
     </p>
-    <p class="footer-copy">GPL-2.0-or-later &bull; 2025</p>
+    <p class="footer-copy">GPL-2.0-or-later &bull; 2026</p>
   </div>
 </footer>
 
@@ -1193,6 +1194,11 @@ const terminalLines = [
   { text: '  ║  ✓  Setup complete!                         ║', classes: 't-green t-bold', delay: 80 },
   { text: '  ║  World Cosmetics is ready to go.            ║', classes: 't-green t-bold', delay: 80 },
   { text: '  ╚══════════════════════════════════════════════╝', classes: 't-green t-bold', delay: 80 },
+  { text: '', delay: 400 },
+  { text: '  Next steps:', classes: 't-white', delay: 100 },
+  { text: '  → cd app/web/app/themes/world-cosmetics && npm install', classes: 't-dim', delay: 80 },
+  { text: '  → npm run dev                      # Vite HMR', classes: 't-dim', delay: 80 },
+  { text: '  → wp-dev-sync watch                # Auto-sync to server', classes: 't-cyan', delay: 80 },
 ];
 
 // ── Terminal animation ──────────────────────────────────────
