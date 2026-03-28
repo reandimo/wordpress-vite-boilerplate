@@ -107,8 +107,9 @@ The setup wizard lets you choose how you want to develop:
 └──────────────────────┴──────────────────────┘
 ```
 
+Powered by [**wp-dev-sync**](https://github.com/reandimo/wp-dev-sync) CLI:
+
 ```bash
-# Sync commands
 npm run sync            # Watch + auto-sync
 npm run sync:push       # One-time upload
 npm run sync:pull       # One-time download
@@ -139,14 +140,6 @@ project/
 ├── setup.js                        # Interactive setup (run once)
 ├── docker-compose.yml              # Docker services
 ├── docker/                         # PHP 8.2-fpm + Nginx configs
-├── scripts/                        # Remote sync scripts
-│   ├── _env.sh                     #   ├─ Shared env (PATH fix for Windows)
-│   ├── _ui.sh                      #   ├─ Terminal UI (colors, banners)
-│   ├── _sync.sh                    #   ├─ Sync logic (SSH + FTP)
-│   ├── sync-watch.sh               #   ├─ Watch + auto-sync
-│   ├── sync-push.sh / pull.sh      #   ├─ Manual sync
-│   ├── tunnel.sh                   #   ├─ Public tunnel (cloudflared/ngrok)
-│   └── setup-remote.sh             #   └─ Dependency + connection check
 ├── app/                            # Bedrock root
 │   ├── composer.json               #   ├─ WP core + plugins (wpackagist)
 │   ├── config/                     #   ├─ WordPress config (environments)

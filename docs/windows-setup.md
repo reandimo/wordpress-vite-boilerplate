@@ -16,7 +16,7 @@ This lets you run `npm run sync`, `npm run setup:remote`, etc. from PowerShell o
 
 ### PATH Extension
 
-Windows tools installed via Chocolatey or Scoop aren't always in Git Bash's PATH. The shared `scripts/_env.sh` automatically adds:
+Windows tools installed via Chocolatey or Scoop aren't always in Git Bash's PATH. The `wp-dev-sync` CLI automatically adds:
 
 - `C:\ProgramData\chocolatey\bin`
 - `C:\ProgramData\chocolatey\lib\rsync\tools\bin`
@@ -26,7 +26,7 @@ Windows tools installed via Chocolatey or Scoop aren't always in Git Bash's PATH
 
 ### File Watching
 
-Windows doesn't have `fswatch` or `inotifywait`, so `sync-watch.sh` falls back to **polling mode** (checks every 2 seconds). This is slightly less efficient but works reliably.
+Windows doesn't have `fswatch` or `inotifywait`, so `wp-dev-sync watch` falls back to **polling mode** (checks every 2 seconds). This is slightly less efficient but works reliably.
 
 ## Installing Dependencies
 
@@ -81,7 +81,7 @@ The setup creates this automatically. If it's missing, create it manually in the
 
 ### rsync/lftp not found (after installing via choco)
 
-Git Bash doesn't inherit the full Windows PATH. The `_env.sh` script handles this, but if it still fails:
+Git Bash doesn't inherit the full Windows PATH. wp-dev-sync handles this automatically, but if it still fails:
 
 ```sh
 # Check where choco installed it

@@ -4,6 +4,29 @@ Edit theme files locally and auto-sync them to a remote server — the same work
 
 No more FTP clients, no more manual uploads. Save a file locally and it's on your server in seconds. Pair it with Vite HMR for instant CSS updates and you have a modern development experience on any hosting.
 
+This boilerplate uses [**wp-dev-sync**](https://github.com/reandimo/wp-dev-sync) — a standalone CLI for WordPress theme syncing.
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run setup:remote` | Check dependencies and test connection |
+| `npm run sync` | Watch for changes + auto-sync (Ctrl+C to stop) |
+| `npm run sync:push` | One-time push to remote |
+| `npm run sync:pull` | One-time pull from remote |
+| `npm run tunnel` | Open public tunnel to remote site |
+| `npm run sync:tunnel` | Watch + tunnel simultaneously |
+
+You can also call `wp-dev-sync` directly:
+
+```bash
+wp-dev-sync watch
+wp-dev-sync push
+wp-dev-sync pull
+wp-dev-sync setup
+wp-dev-sync tunnel
+```
+
 ## Protocols
 
 ### SSH (rsync) — Recommended
@@ -45,6 +68,10 @@ sudo apt install lftp
 ### .env Variables
 
 ```sh
+# Paths
+LOCAL_PATH=./app/web/app/themes/my-theme
+REMOTE_PATH=/var/www/html/wp-content/themes/my-theme
+
 # Protocol: ssh or ftp
 SYNC_PROTOCOL=ssh
 
@@ -52,7 +79,6 @@ SYNC_PROTOCOL=ssh
 REMOTE_USER=username
 REMOTE_HOST=myserver.com
 REMOTE_PORT=22              # 22 for SSH, 21 for FTP
-REMOTE_THEME_PATH=/var/www/html/wp-content/themes/my-theme
 
 # FTP only
 REMOTE_PASSWORD=mypassword
@@ -75,17 +101,6 @@ ssh-copy-id -p 22 user@myserver.com
 ssh -p 22 user@myserver.com
 ```
 
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `npm run setup:remote` | Check dependencies and test connection |
-| `npm run sync` | Watch for changes + auto-sync (Ctrl+C to stop) |
-| `npm run sync:push` | One-time push to remote |
-| `npm run sync:pull` | One-time pull from remote |
-| `npm run tunnel` | Open public tunnel to remote site |
-| `npm run sync:tunnel` | Watch + tunnel simultaneously |
-
 ## Watch Mode
 
 `npm run sync` starts a file watcher that syncs on every change:
@@ -96,7 +111,7 @@ ssh -p 22 user@myserver.com
 | Linux | inotifywait | ~0.5s |
 | Windows | Polling | ~2s |
 
-The watcher syncs only the theme directory, not the entire project.
+The watcher syncs only the directory specified in `LOCAL_PATH`.
 
 ## SYNC_DELETE Explained
 
@@ -124,25 +139,10 @@ Install:
 choco install cloudflared    # or: choco install ngrok
 ```
 
-## Script Architecture
-
-```
-scripts/
-├── _env.sh          # Loads .env + extends PATH for Windows (Chocolatey, Scoop, Git)
-├── _sync.sh         # Shared sync functions (sync_push, sync_pull) for both protocols
-├── sync-watch.sh    # Calls sync_push on file changes
-├── sync-push.sh     # One-time sync_push
-├── sync-pull.sh     # One-time sync_pull
-├── tunnel.sh        # Opens cloudflared or ngrok tunnel
-└── setup-remote.sh  # Dependency checker + connection tester
-```
-
-All scripts source `_env.sh` first (loads `.env` + fixes PATH on Windows) then `_sync.sh` (provides `sync_push` and `sync_pull` functions that handle both SSH and FTP).
-
 ## Troubleshooting
 
 ### rsync: command not found (Windows)
-Chocolatey's rsync may not be in Git Bash's PATH. The `_env.sh` script adds common paths automatically. If it still fails:
+wp-dev-sync automatically adds common Chocolatey/Scoop paths to Git Bash's PATH. If it still fails:
 ```sh
 export PATH="/c/ProgramData/chocolatey/bin:$PATH"
 ```
@@ -164,4 +164,4 @@ export PATH="/c/ProgramData/chocolatey/bin:$PATH"
 
 ---
 
-*Part of [WordPress Vite Boilerplate](https://github.com/reandimo/wordpress-vite-boilerplate) by [Renan Diaz](https://reandimo.dev)*
+*Powered by [wp-dev-sync](https://github.com/reandimo/wp-dev-sync) · Part of [WordPress Vite Boilerplate](https://github.com/reandimo/wordpress-vite-boilerplate) by [Renan Diaz](https://reandimo.dev)*
