@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 # Shared environment for sync scripts.
-# Sources .env and extends PATH on Windows so tools installed via
-# Chocolatey, Scoop, or default system paths are found by Git Bash.
+# Safely loads .env (handles passwords with special chars) and extends
+# PATH on Windows so tools installed via Chocolatey/Scoop are found.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="$SCRIPT_DIR/../.env"
 
 # Windows: Git Bash doesn't inherit all system PATH entries.
-# Add common tool locations so rsync, ssh, cloudflared, etc. are found.
 if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
     WIN_PATHS=(
         "/c/ProgramData/chocolatey/bin"
@@ -21,10 +20,22 @@ if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
     done
 fi
 
-# Load .env if it exists
+# Load .env safely — line-by-line parser that handles special characters
+# in values (parentheses, ampersands, dollar signs, etc.)
 if [ -f "$ENV_FILE" ]; then
-    set -a
-    # shellcheck source=/dev/null
-    source "$ENV_FILE"
-    set +a
+    while IFS= read -r line || [ -n "$line" ]; do
+        # Skip empty lines and comments
+        [[ -z "$line" || "$line" == \#* ]] && continue
+        # Extract key=value, strip surrounding quotes from value
+        if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*) ]]; then
+            key="${BASH_REMATCH[1]}"
+            val="${BASH_REMATCH[2]}"
+            # Remove surrounding quotes (single or double)
+            val="${val%\"}"
+            val="${val#\"}"
+            val="${val%\'}"
+            val="${val#\'}"
+            export "$key=$val"
+        fi
+    done < "$ENV_FILE"
 fi
