@@ -40,3 +40,4 @@ node_modules/
 
 # Setup backup (after running setup.js)
 .setup-backup/
+.claude
