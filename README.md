@@ -1,13 +1,13 @@
 # WordPress Vite Boilerplate
 
-**WordPress Bedrock + Docker + Vite** boilerplate with interactive setup, Block Theme (FSE), ACF Blocks v3, TypeScript, SCSS, and optional remote sync.
+**WordPress Bedrock + Docker + Vite** boilerplate with interactive setup, Block Theme (FSE), ACF Blocks v3, TypeScript, SCSS, and remote sync (SSH or FTP).
 
 ## Requirements
 
 - [Node.js](http://nodejs.org/) >= 18
 - [Git](https://git-scm.com/) (includes Git Bash on Windows)
 
-Additional tools are checked automatically by the setup script based on your chosen dev mode.
+All other dependencies are checked automatically by the setup script.
 
 ## Quick Start
 
@@ -22,59 +22,36 @@ node setup.js
 # 3. Follow the on-screen instructions
 ```
 
-The setup script will:
-- Detect your OS (Windows, macOS, Linux) and configure accordingly
-- Ask for theme name, namespace, dev mode, and optional features
-- Check all required dependencies and show install instructions for missing ones
-- Replace all placeholders, rename directories, and configure `.env` files
-- On Windows: auto-create `.npmrc` so bash scripts work from PowerShell
+The setup script detects your OS, asks for your preferences, checks dependencies, and configures everything. See the [Setup Guide](docs/setup-guide.md) for details.
 
 ## Dev Modes
 
-### Docker (local development)
+| Mode | Description | Sync Protocol |
+|------|-------------|---------------|
+| **docker** | Full local stack (PHP, Nginx, MariaDB, MailHog, phpMyAdmin) | — |
+| **remote-sync** | Edit locally, auto-sync to remote server | SSH (rsync) or FTP (lftp) |
+| **both** | Docker local + remote sync | SSH or FTP |
 
-Full local stack: PHP 8.2-fpm, Nginx, MariaDB 11, MailHog, phpMyAdmin.
+## Sync Protocols
 
-**Requirements:** Docker, Docker Compose, Composer
+| | SSH (rsync) | FTP (lftp) |
+|--|------------|------------|
+| **Speed** | Fast (delta sync) | Slower (full mirror) |
+| **Auth** | SSH key | Username + password |
+| **Requires** | SSH access on server | Any FTP hosting |
+| **Install** | `choco install rsync` | `choco install lftp` |
 
-```sh
-cp .env.example .env
-cp app/.env.example app/.env    # Edit: set DB_HOST=db, generate salts
-cd app && composer install && cd ..
-docker compose up -d
-cd app/web/app/themes/<your-theme>
-npm install && npm run dev
-```
+## Documentation
 
-| URL | Service |
-|-----|---------|
-| http://localhost | WordPress |
-| http://localhost:8080 | phpMyAdmin |
-| http://localhost:8025 | MailHog |
-
-### Remote Sync (like Shopify theme dev)
-
-Edit locally, auto-sync to a remote server via rsync/SSH.
-
-**Requirements:** rsync, SSH
-
-```sh
-# Configure .env with REMOTE_USER, REMOTE_HOST, REMOTE_THEME_PATH
-npm run setup:remote    # Verify dependencies and SSH connection
-npm run sync            # Watch + auto-sync
-npm run sync:push       # Manual push
-npm run sync:pull       # Manual pull
-npm run tunnel          # Expose remote site via tunnel
-```
-
-#### Windows Notes
-
-On Windows, bash scripts run through Git Bash (configured automatically via `.npmrc`). Tools installed via Chocolatey or Scoop are detected automatically by the shared `scripts/_env.sh` which extends the PATH.
-
-```powershell
-# Install rsync on Windows (PowerShell as Admin)
-choco install rsync
-```
+| Page | Description |
+|------|-------------|
+| [Setup Guide](docs/setup-guide.md) | Interactive setup walkthrough and configuration options |
+| [Docker Development](docs/docker-development.md) | Local Docker stack, services, and daily workflow |
+| [Remote Sync](docs/remote-sync.md) | SSH/FTP sync, watch mode, tunnels, and troubleshooting |
+| [Theme Development](docs/theme-development.md) | Vite, HMR, SCSS, TypeScript, and asset pipeline |
+| [ACF Blocks](docs/acf-blocks.md) | Creating custom blocks with ACF v3 |
+| [Deployment](docs/deployment.md) | Production builds and server deployment |
+| [Windows Setup](docs/windows-setup.md) | Windows-specific configuration and troubleshooting |
 
 ## Project Structure
 
@@ -82,23 +59,19 @@ choco install rsync
 project/
 ├── setup.js                     # Interactive setup (run once)
 ├── docker-compose.yml           # Docker services
-├── docker/
-│   ├── nginx/default.conf       # Nginx config
-│   └── php/Dockerfile           # PHP 8.2-fpm-alpine
+├── docker/                      # PHP 8.2-fpm + Nginx configs
 ├── scripts/                     # Remote sync scripts
-│   ├── _env.sh                  # Shared env loader (PATH fix for Windows)
+│   ├── _env.sh                  # Shared env (PATH fix for Windows)
+│   ├── _sync.sh                 # Shared sync logic (SSH + FTP)
 │   ├── sync-watch.sh            # Watch + auto-sync
-│   ├── sync-push.sh             # Manual push to remote
-│   ├── sync-pull.sh             # Manual pull from remote
+│   ├── sync-push.sh / pull.sh   # Manual sync
 │   ├── tunnel.sh                # Public tunnel (cloudflared/ngrok)
-│   └── setup-remote.sh          # Verify deps + SSH connection
+│   └── setup-remote.sh          # Dependency + connection check
 ├── app/                         # Bedrock root
 │   ├── composer.json
-│   ├── config/
+│   ├── config/                  # WordPress config (environments)
 │   └── web/app/themes/<theme>/  # Block Theme (FSE)
-├── .cursor/rules/               # Cursor IDE coding standards
-├── .editorconfig
-├── .npmrc                       # Auto-created on Windows (Git Bash shell)
+├── .cursor/rules/               # Cursor IDE coding standards (9 rule files)
 └── package.json                 # Root scripts (sync, tunnel, setup)
 ```
 
@@ -106,74 +79,25 @@ project/
 
 ```
 app/web/app/themes/<theme>/
-├── blocks/                  # ACF Blocks v3 (block.json + render.php)
-│   └── example-cta/         # Example block for reference
-├── includes/                # PHP classes (PSR-4)
+├── blocks/example-cta/      # Example ACF Block v3
+├── includes/
 │   ├── ACF/                 # ACF field groups
-│   ├── Helpers/             # ViteHelper.php
-│   └── Theme/               # ThemeSetup.php
-├── parts/                   # Template parts (header.html, footer.html)
-├── templates/               # Block templates (FSE)
+│   ├── Helpers/ViteHelper.php
+│   └── Theme/ThemeSetup.php
+├── parts/                   # header.html, footer.html
+├── templates/               # FSE templates (index, page, single, 404...)
 ├── resources/
-│   ├── fonts/               # Custom fonts (copied to public/ by Vite)
-│   ├── scripts/             # TypeScript (entry: frontend/main.ts)
-│   └── styles/              # SCSS (entry: frontend/main.scss)
-│       └── base/            # _variables.scss, _media-queries.scss
-├── public/                  # Vite build output (gitignored)
+│   ├── fonts/               # Custom fonts (Vite copies to public/)
+│   ├── scripts/frontend/main.ts
+│   └── styles/
+│       ├── base/            # _variables.scss, _media-queries.scss
+│       ├── sections/        # Block/section styles
+│       └── frontend/main.scss
 ├── theme.json               # Design tokens
-├── vite.config.js           # Vite 5 build config
-└── functions.php            # Theme bootstrap + PSR-4 autoloader
+├── vite.config.js           # Vite 5 + HMR
+└── functions.php            # PSR-4 autoloader + bootstrap
 ```
 
-## Creating a New ACF Block
+## License
 
-1. Create `blocks/my-block/block.json` + `blocks/my-block/render.php`
-2. Create field group in `includes/ACF/MyBlock.php`
-3. Add `'MyBlock'` to the `$acf_files` array in `functions.php`
-4. Add `'my-block'` to the `$blocks` array in `ThemeSetup.php`
-5. Create styles in `resources/styles/sections/_my-block.scss`
-6. Import in `resources/styles/frontend/main.scss`
-
-See `blocks/example-cta/` for a complete example.
-
-## Asset Compilation
-
-From the theme directory:
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Vite dev server with HMR (localhost:5173) |
-| `npm run build` | Build assets once |
-| `npm run production` | Optimized production build |
-
-### How HMR Works
-
-1. `npm run dev` starts Vite on `localhost:5173` and creates `public/hot`
-2. `ViteHelper.php` detects the hot file and loads assets from the dev server
-3. CSS changes appear instantly without page reload
-4. `host.docker.internal` lets Docker's PHP reach Vite on the host
-
-## Dependencies by Mode
-
-| Tool | Docker | Remote Sync | Both |
-|------|--------|-------------|------|
-| Node.js >= 18 | required | required | required |
-| Docker + Compose | required | - | required |
-| Composer | required | - | required |
-| rsync | - | required | required |
-| SSH | - | required | required |
-| fswatch (macOS) | - | recommended | recommended |
-| inotify-tools (Linux) | - | recommended | recommended |
-| cloudflared / ngrok | - | optional | optional |
-
-The setup script checks all of these and shows install commands for your OS.
-
-## Production Deployment
-
-```sh
-cd app/web/app/themes/<your-theme>
-npm run production
-
-cd app
-composer install --no-dev --optimize-autoloader
-```
+GPL-2.0-or-later
