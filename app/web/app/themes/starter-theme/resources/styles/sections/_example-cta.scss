@@ -1,0 +1,59 @@
+@use '../base/variables' as *;
+@use '../base/media-queries' as mq;
+
+.example-cta {
+    padding: 4rem 2rem;
+    text-align: center;
+    background-color: $color-light;
+    border-radius: $card-border-radius;
+}
+
+.example-cta__content {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.example-cta__heading {
+    margin-bottom: 1rem;
+    font-size: $font-size-xxl;
+    font-weight: $font-weight-bold;
+    line-height: $line-height-heading;
+    color: $color-dark;
+}
+
+.example-cta__description {
+    margin-bottom: 2rem;
+    font-size: $font-size-large;
+    color: $color-muted;
+    line-height: $line-height-body;
+}
+
+.example-cta__button {
+    display: inline-block;
+    padding: $button-padding;
+    background-color: $color-primary;
+    color: $color-white;
+    text-decoration: none;
+    border-radius: $button-border-radius;
+    font-weight: $font-weight-medium;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+        background-color: color-mix(in oklch, $color-primary, black 15%);
+    }
+
+    &:focus-visible {
+        outline: 2px solid $color-primary;
+        outline-offset: 2px;
+    }
+}
+
+@include mq.respond-below(sm) {
+    .example-cta {
+        padding: 2rem 1rem;
+    }
+
+    .example-cta__heading {
+        font-size: $font-size-xl;
+    }
+}

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "acf/example-cta",
+  "title": "Example CTA",
+  "description": "A simple call-to-action block demonstrating the ACF Block v3 pattern.",
+  "category": "__THEME_SLUG__",
+  "icon": "megaphone",
+  "keywords": ["cta", "call to action", "example"],
+  "acf": {
+    "mode": "preview",
+    "blockVersion": 3,
+    "autoInlineEditing": true,
+    "renderTemplate": "render.php"
+  },
+  "supports": {
+    "anchor": true,
+    "align": ["wide", "full"],
+    "jsx": true,
+    "multiple": true,
+    "reusable": true
+  },
+  "textdomain": "__THEME_SLUG__"
+}

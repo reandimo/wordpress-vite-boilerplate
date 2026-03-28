@@ -1,0 +1,42 @@
+# Environment
+.env
+
+# Bedrock
+app/.env
+app/vendor/
+app/web/wp/
+app/web/app/plugins/*
+!app/web/app/plugins/.gitkeep
+app/web/app/themes/*
+!app/web/app/themes/.gitkeep
+!app/web/app/themes/starter-theme/
+
+# Theme build artifacts
+app/web/app/themes/starter-theme/node_modules/
+app/web/app/themes/starter-theme/vendor/
+app/web/app/themes/starter-theme/public/hot
+app/web/app/themes/starter-theme/public/css/
+app/web/app/themes/starter-theme/public/js/
+app/web/app/themes/starter-theme/public/manifest.json
+app/web/app/themes/starter-theme/public/.vite/
+
+# Composer
+composer.lock
+composer.phar
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+docker/logs/
+
+# Node
+node_modules/
+
+# Setup backup (after running setup.js)
+.setup-backup/

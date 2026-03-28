@@ -1,0 +1,43 @@
+// Media Query Mixins
+// Breakpoints per CLAUDE.md: xs:576px, sm:768px, md:1200px, lg:1440px, xl:1600px
+//
+// Usage (from resources/styles/sections/):
+//   @use '../base/media-queries' as mq;
+//   @include mq.respond-above(sm) { ... }
+//   @include mq.respond-below(md) { ... }
+//   @include mq.respond-between(sm, md) { ... }
+
+@use 'sass:map';
+
+$breakpoints: (
+    'xs': 576px,
+    'sm': 768px,
+    'md': 1200px,
+    'lg': 1440px,
+    'xl': 1600px,
+);
+
+/// Styles apply when viewport is WIDER than the named breakpoint.
+@mixin respond-above($bp) {
+    $value: map.get($breakpoints, $bp);
+    @media (min-width: #{$value}) {
+        @content;
+    }
+}
+
+/// Styles apply when viewport is NARROWER than the named breakpoint.
+@mixin respond-below($bp) {
+    $value: map.get($breakpoints, $bp);
+    @media (max-width: calc(#{$value} - 1px)) {
+        @content;
+    }
+}
+
+/// Styles apply between two breakpoints (inclusive lower, exclusive upper).
+@mixin respond-between($lower, $upper) {
+    $lower-value: map.get($breakpoints, $lower);
+    $upper-value: map.get($breakpoints, $upper);
+    @media (min-width: #{$lower-value}) and (max-width: calc(#{$upper-value} - 1px)) {
+        @content;
+    }
+}
