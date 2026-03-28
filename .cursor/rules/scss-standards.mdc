@@ -1,0 +1,686 @@
+---
+description: Estándares de SCSS/CSS moderno 2026
+globs: ["**/resources/styles/**/*.scss", "**/resources/styles/**/*.css"]
+alwaysApply: true
+---
+
+# Estándares de SCSS/CSS 2026
+
+## Organización
+
+- **Ubicación**: Todos los archivos SCSS fuente en `resources/styles/`
+- **Organización**: Separar por `base/`, `components/`, `sections/`, `templates/`, `frontend/`, y `admin/`
+- **Compilación**: Usar Vite 5 (vite.config.js) con plugin Sass
+- **Estructura**: Usar partials y organización modular
+- **No inline styles**: Evitar estilos inline en JavaScript, usar clases CSS/SCSS
+- **Import**: Los estilos SCSS se importan desde el entry frontend (ej: `main.ts` → `import '../../styles/frontend/main.scss'`)
+- **Entry points**: 
+  - `resources/styles/frontend/main.scss` - Importa todos los estilos del frontend
+  - `resources/styles/admin/main.scss` - Importa todos los estilos del admin de WordPress
+
+## Flujo de Trabajo
+
+1. **Editar archivos fuente** en `resources/styles/`
+   - `resources/styles/frontend/main.scss` - Punto de entrada principal del frontend
+   - `resources/styles/admin/main.scss` - Punto de entrada principal del admin
+   - `resources/styles/base/` - Variables, mixins, reset, tipografía
+   - `resources/styles/components/` - Estilos de componentes reutilizables
+   - `resources/styles/sections/` - Estilos específicos de secciones
+   - `resources/styles/templates/` - Estilos específicos de templates
+2. **Compilar** con `npm run dev` (desarrollo una vez), `npm run watch` (observar cambios), o `npm run production` (producción optimizada)
+3. **Archivos compilados** se generan en `public/css/` junto con `public/js/`
+4. **Manifest**: Vite genera `public/manifest.json` para mapear assets compilados
+5. **Carga automática**: Los assets se cargan vía `ViteHelper.php` usando `wp_enqueue_style()`
+6. **No editar directamente** los archivos en `public/` (se sobrescriben)
+
+## Características CSS Modernas 2026
+
+### Container Queries
+
+Diseño responsive basado en el contenedor, no en el viewport:
+
+```css
+/* Definir contenedor */
+.card-container {
+  container-type: inline-size;
+  container-name: card;
+}
+
+/* Estilos basados en tamaño del contenedor */
+@container card (min-width: 400px) {
+  .card__title {
+    font-size: 2rem;
+  }
+  
+  .card__layout {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+  }
+}
+
+@container card (min-width: 600px) {
+  .card__title {
+    font-size: 2.5rem;
+  }
+}
+```
+
+### Cascade Layers
+
+Control de especificidad y orden de precedencia:
+
+```css
+/* Definir capas en orden de prioridad */
+@layer reset, base, components, utilities;
+
+@layer reset {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+}
+
+@layer base {
+  body {
+    font-family: system-ui, sans-serif;
+    line-height: 1.5;
+  }
+}
+
+@layer components {
+  .button {
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+  }
+}
+
+@layer utilities {
+  .text-center {
+    text-align: center;
+  }
+}
+```
+
+### :has() Selector (Parent Selector)
+
+```css
+/* Estilizar padre basado en hijos */
+.card:has(.card__image) {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+}
+
+/* Estilizar hermanos */
+.nav-item:has(+ .nav-item--active) {
+  border-right: 2px solid blue;
+}
+
+/* Formularios con validación */
+.form-group:has(input:invalid) {
+  border-color: red;
+}
+
+.form-group:has(input:valid) {
+  border-color: green;
+}
+```
+
+### Native CSS Nesting
+
+```css
+/* Nesting nativo sin SCSS */
+.card {
+  padding: 1rem;
+  
+  & .card__title {
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+  
+  & .card__body {
+    margin-top: 1rem;
+  }
+  
+  &:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+}
+```
+
+### @scope para Scoping
+
+```css
+/* Prevenir conflictos globales */
+@scope (.card) {
+  .title {
+    font-size: 1.5rem;
+  }
+  
+  .description {
+    color: #666;
+  }
+}
+
+/* Con límites */
+@scope (.article) to (.sidebar) {
+  /* Estilos solo dentro de .article pero no en .sidebar */
+  p {
+    line-height: 1.8;
+  }
+}
+```
+
+### Anchor Positioning
+
+```css
+/* Tooltip anclado a un elemento */
+.tooltip {
+  position: absolute;
+  position-anchor: --trigger;
+  bottom: anchor(top);
+  left: anchor(center);
+  translate: -50% -8px;
+}
+
+.trigger {
+  anchor-name: --trigger;
+}
+
+/* Dropdown menu */
+.dropdown-menu {
+  position: absolute;
+  position-anchor: --dropdown-button;
+  top: anchor(bottom);
+  left: anchor(left);
+}
+
+.dropdown-button {
+  anchor-name: --dropdown-button;
+}
+```
+
+### Scroll-Driven Animations
+
+```css
+/* Animación basada en scroll */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reveal {
+  animation: fade-in linear;
+  animation-timeline: view();
+  animation-range: entry 0% cover 30%;
+}
+
+/* Progress bar basado en scroll */
+.progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 4px;
+  background: blue;
+  transform-origin: left;
+  scale: var(--scroll-progress) 1;
+  animation: scroll-progress linear;
+  animation-timeline: scroll();
+}
+```
+
+### Color Functions Modernas
+
+```css
+/* oklch() - Mejor espacio de color */
+.primary {
+  background: oklch(60% 0.15 240);
+}
+
+/* color-mix() - Mezclar colores */
+.button {
+  background: color-mix(in oklch, blue 70%, white);
+}
+
+.button:hover {
+  background: color-mix(in oklch, blue 80%, black);
+}
+
+/* light-dark() - Theming automático */
+.card {
+  background: light-dark(white, #1a1a1a);
+  color: light-dark(#333, #f0f0f0);
+}
+```
+
+## Layout Moderno
+
+### CSS Grid como Default
+
+```css
+/* Layout de página con Grid */
+.page-layout {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas:
+    "header header"
+    "sidebar main"
+    "footer footer";
+  gap: 1rem;
+  min-height: 100vh;
+}
+
+.header { grid-area: header; }
+.sidebar { grid-area: sidebar; }
+.main { grid-area: main; }
+.footer { grid-area: footer; }
+```
+
+### Subgrid
+
+```css
+/* Alineación consistente en grids anidados */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.card {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 3;
+}
+```
+
+### Intrinsic Sizing
+
+```css
+/* Responsive sin media queries */
+.container {
+  width: min(90%, 1200px);
+  padding: clamp(1rem, 5vw, 3rem);
+  font-size: clamp(1rem, 2.5vw, 1.5rem);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: 1rem;
+}
+```
+
+## Metodología BEM
+
+Seguir **BEM** para nomenclatura de clases:
+
+### Estructura BEM
+
+- **Block**: Componente independiente (ej: `button`, `card`, `header`)
+- **Element**: Parte de un bloque (ej: `button__icon`, `card__title`)
+- **Modifier**: Variante o estado (ej: `button--primary`, `button--disabled`)
+
+### Sintaxis
+
+```scss
+.block {}
+.block__element {}
+.block--modifier {}
+.block__element--modifier {}
+```
+
+### Ejemplos BEM
+
+```scss
+// Block
+.button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+}
+
+// Element
+.button__icon {
+  margin-right: 8px;
+}
+
+.button__text {
+  font-weight: bold;
+}
+
+// Modifier
+.button--primary {
+  background: oklch(60% 0.15 240);
+  color: white;
+}
+
+.button--secondary {
+  background: oklch(70% 0.05 240);
+  color: #333;
+}
+
+.button--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+```
+
+### BEM en SCSS
+
+```scss
+.card {
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+
+  &__header {
+    margin-bottom: 15px;
+  }
+
+  &__title {
+    font-size: 24px;
+    font-weight: bold;
+  }
+
+  &__body {
+    line-height: 1.6;
+  }
+
+  &__footer {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+  }
+
+  &--featured {
+    border-color: gold;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  &--compact {
+    padding: 10px;
+
+    .card__title {
+      font-size: 18px;
+    }
+  }
+}
+```
+
+## SCSS Best Practices
+
+### Variables Centralizadas
+
+```scss
+// _variables.scss
+$color-primary: oklch(60% 0.15 240);
+$color-secondary: oklch(70% 0.05 240);
+$color-text: light-dark(#333, #f0f0f0);
+$color-background: light-dark(white, #1a1a1a);
+
+$spacing-xs: 0.25rem;
+$spacing-sm: 0.5rem;
+$spacing-md: 1rem;
+$spacing-lg: 2rem;
+$spacing-xl: 4rem;
+```
+
+### Media Query Mixins (OBLIGATORIO)
+
+El tema incluye mixins estandarizados en `resources/media-queries.scss`:
+
+**Breakpoints definidos:**
+```scss
+$breakpoints: (
+  xs: 576px,   // Mobile small
+  sm: 768px,   // Tablet
+  md: 1200px,  // Desktop
+  lg: 1440px,  // Large desktop
+  xl: 1600px   // Extra large
+);
+```
+
+**Uso obligatorio - NO usar @media directo:**
+
+```scss
+// ✅ SIEMPRE importar al inicio del archivo
+// Desde resources/styles/components/ o templates/: @use '../../media-queries' as mq;
+// Desde resources/styles/frontend/: @use '../../media-queries' as mq;
+@use '../../media-queries' as mq;
+
+.my-component {
+  padding: 20px;
+
+  // ✅ Correcto - Usar mixins
+  @include mq.respond-above(sm) {
+    padding: 40px;
+  }
+
+  @include mq.respond-below(md) {
+    font-size: 14px;
+  }
+
+  @include mq.respond-between(sm, md) {
+    display: grid;
+  }
+
+  // ❌ Incorrecto - NO usar @media directo
+  @media (max-width: 768px) {
+    padding: 10px;
+  }
+}
+```
+
+**Mixins disponibles:**
+- `respond-above($breakpoint)` - Estilos para pantallas MÁS GRANDES que el breakpoint
+- `respond-below($breakpoint)` - Estilos para pantallas MÁS PEQUEÑAS que el breakpoint
+- `respond-between($lower, $upper)` - Estilos entre dos breakpoints
+
+**Anidar media queries dentro de selectores (OBLIGATORIO):**
+
+Los estilos mobile y responsive deben ir **anidados dentro de sus selectores**, no en bloques `@media` o `@include mq.respond-below()` separados al final del archivo.
+
+```scss
+// ✅ Correcto - Media query anidada dentro del selector
+.card {
+  padding: 20px;
+
+  @include mq.respond-below(md) {
+    padding: 12px;
+  }
+}
+
+.card__title {
+  font-size: 24px;
+
+  @include mq.respond-below(md) {
+    font-size: 18px;
+  }
+}
+
+// ❌ Incorrecto - Bloque responsive separado al final
+.card {
+  padding: 20px;
+}
+
+.card__title {
+  font-size: 24px;
+}
+
+@include mq.respond-below(md) {
+  .card { padding: 12px; }
+  .card__title { font-size: 18px; }
+}
+```
+
+### Mixins y Functions
+
+**IMPORTANTE: Usar siempre los mixins de `media-queries.scss`**
+
+```scss
+// ✅ CORRECTO - Usar mixins estandarizados
+// Path relativo desde resources/styles/**/
+@use '../../media-queries' as mq;
+
+.element {
+  padding: 1rem;
+  
+  @include mq.respond-above(md) {
+    padding: 2rem;
+  }
+  
+  @include mq.respond-below(sm) {
+    padding: 0.5rem;
+  }
+  
+  @include mq.respond-between(sm, md) {
+    display: grid;
+  }
+}
+
+// Mixin para container queries
+@mixin container($name, $min-width) {
+  @container #{$name} (min-width: #{$min-width}) {
+    @content;
+  }
+}
+
+// Function para spacing
+@function spacing($multiplier) {
+  @return calc($spacing-md * $multiplier);
+}
+
+// Uso
+.element {
+  padding: spacing(2); // 2rem
+  
+  @include mq.respond-above(md) {
+    padding: spacing(3); // 3rem
+  }
+}
+```
+
+### Limitar Nesting
+
+```scss
+// ✅ Correcto - Máximo 3 niveles
+.nav {
+  &__list {
+    &__item {
+      // Máximo 3 niveles
+    }
+  }
+}
+
+// ❌ Evitar - Demasiado anidado
+.nav {
+  .list {
+    .item {
+      .link {
+        .icon {
+          // Demasiado profundo
+        }
+      }
+    }
+  }
+}
+```
+
+### Modularización con Partials
+
+```scss
+// resources/styles/frontend/main.scss
+@import '../base/variables';
+@import '../base/mixins';
+@import '../base/reset';
+@import '../base/typography';
+@import '../components/button';
+@import '../components/card';
+@import '../sections/header';
+@import '../templates/home';
+
+// resources/styles/admin/main.scss
+@import '../base/variables';
+@import '../base/mixins';
+@import '../components/button';
+// Estilos específicos del admin de WordPress
+```
+
+**Estructura recomendada:**
+- `base/` - Variables, mixins, reset, tipografía, fuentes
+- `components/` - Componentes reutilizables (botones, cards, etc.)
+- `sections/` - Estilos específicos de secciones del sitio
+- `templates/` - Estilos específicos de templates de WordPress
+- `frontend/` - Puntos de entrada del frontend (main.scss)
+- `admin/` - Puntos de entrada del admin de WordPress (main.scss)
+
+### Editor Overrides (Block Editor iframe)
+
+Las animaciones fade-in disparadas por JS (IntersectionObserver, etc.) no funcionan bien en el iframe del Block Editor. Crear `resources/styles/base/_editor-overrides.scss` con overrides bajo `.editor-styles-wrapper` para mostrar contenido sin animación:
+
+```scss
+.editor-styles-wrapper {
+  .mi-componente,
+  .mi-componente__item {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}
+```
+
+- **Importar al final** de `main.scss` para que sobrescriba los estilos de animación.
+- Añadir cada componente que use `data-animate-on-view` o animaciones on-load.
+
+## Cuándo Usar SCSS vs CSS Nativo
+
+### Usar SCSS para:
+- Variables complejas y cálculos
+- Mixins reutilizables
+- Funciones personalizadas
+- Organización con partials
+- Lógica condicional (@if, @each, @for)
+
+### Usar CSS Nativo para:
+- Nesting simple (ya soportado nativamente)
+- Container queries
+- Cascade layers
+- Anchor positioning
+- Scroll-driven animations
+- Color functions modernas
+
+## Buenas Prácticas Generales
+
+1. **Preferir CSS nativo**: Usar características modernas de CSS cuando sea posible
+2. **Container queries sobre media queries**: Para componentes verdaderamente portables
+3. **Cascade layers**: Para control de especificidad sin !important
+4. **BEM para naming**: Mantener consistencia y claridad
+5. **Variables CSS**: Para theming dinámico (complementar SCSS variables)
+6. **Performance**: Minimizar selectores complejos, usar will-change con cuidado
+7. **Accessibility**: Considerar prefers-reduced-motion, prefers-color-scheme
+8. **Mobile-first**: Diseñar primero para móvil, expandir para desktop
+9. **Semantic naming**: Nombres basados en propósito, no en apariencia
+10. **Documentación**: Comentar decisiones complejas o no obvias
+
+## Variables CSS para Theming
+
+```css
+:root {
+  --color-primary: oklch(60% 0.15 240);
+  --color-text: light-dark(#333, #f0f0f0);
+  --spacing-md: 1rem;
+}
+
+.button {
+  background: var(--color-primary);
+  color: var(--color-text);
+  padding: var(--spacing-md);
+}
+```

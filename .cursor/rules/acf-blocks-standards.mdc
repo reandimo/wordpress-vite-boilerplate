@@ -1,0 +1,342 @@
+---
+description: Estandares para ACF Blocks v3 en WordPress Block Theme 2026
+alwaysApply: true
+---
+
+# Estandares de ACF Blocks v3
+
+Este proyecto usa **ACF Blocks v3** con `block.json` para crear bloques personalizados reutilizables.
+
+## Estructura de un Block v3
+
+```
+blocks/
+├── block-name/
+│   ├── block.json      # Configuracion del block (obligatorio)
+│   └── render.php      # Template de renderizado (obligatorio)
+```
+
+## Configuracion block.json
+
+Todos los blocks deben seguir esta estructura estandar:
+
+```json
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "acf/block-name",
+	"title": "Block Title",
+	"description": "Block description for the inserter",
+	"category": "__THEME_SLUG__",
+	"icon": "admin-site",
+	"keywords": ["keyword1", "keyword2"],
+	"acf": {
+		"mode": "preview",
+		"blockVersion": 3,
+		"autoInlineEditing": true,
+		"renderTemplate": "render.php"
+	},
+	"supports": {
+		"anchor": true,
+		"align": ["wide", "full"],
+		"jsx": true,
+		"multiple": true
+	},
+	"textdomain": "__THEME_SLUG__"
+}
+```
+
+### Propiedades Obligatorias de ACF
+
+```json
+"acf": {
+	"mode": "preview",              // Siempre "preview" para mejor UX
+	"blockVersion": 3,              // OBLIGATORIO: Indica ACF Blocks v3
+	"autoInlineEditing": true,      // OBLIGATORIO: Habilita edicion inline
+	"renderTemplate": "render.php"  // Template de renderizado
+}
+```
+
+### Opciones de Supports
+
+```json
+"supports": {
+	"anchor": true,          // Permite anchor ID
+	"align": ["wide", "full"], // Alineaciones permitidas
+	"jsx": true,             // Soporta JSX en render
+	"multiple": true,        // Permite multiples instancias
+	"reusable": true         // Puede guardarse como patron reutilizable
+}
+```
+
+Para blocks unicos (header, footer, layout principal):
+```json
+"supports": {
+	"anchor": false,
+	"align": false,
+	"jsx": true,
+	"multiple": false,      // Solo una instancia
+	"reusable": false       // No reutilizable
+}
+```
+
+## Template render.php
+
+Todos los templates deben seguir esta estructura:
+
+```php
+<?php
+
+/**
+ * ACF Block v3: Block Name
+ * Block description
+ *
+ * @package __NAMESPACE__
+ * @var array $block The block settings and attributes.
+ * @var string $content The block inner HTML (empty).
+ * @var bool $is_preview True during backend preview render.
+ * @var int $post_id The post ID the block is rendering content against.
+ */
+
+declare(strict_types=1);
+
+defined('ABSPATH') || exit;
+
+// Get ACF fields
+$title = get_field('title') ?: 'Default Title';
+$description = get_field('description');
+
+// Block wrapper classes
+$class_name = 'block-name';
+if (!empty($block['className'])) {
+    $class_name .= ' ' . $block['className'];
+}
+if (!empty($block['align'])) {
+    $class_name .= ' align' . $block['align'];
+}
+
+$anchor_id = !empty($block['anchor']) ? $block['anchor'] : '';
+?>
+
+<section class="<?php echo esc_attr($class_name); ?>" <?php echo $anchor_id ? 'id="' . esc_attr($anchor_id) . '"' : ''; ?>>
+	<div class="block-name__container">
+		<!-- Block content here -->
+	</div>
+</section>
+```
+
+## Campos ACF
+
+Crear campos ACF en `includes/ACF/BlockName.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+defined('ABSPATH') || exit;
+
+if (!function_exists('acf_add_local_field_group')) {
+    return;
+}
+
+/**
+ * ACF fields for Block Name block
+ */
+acf_add_local_field_group([
+    'key'      => 'group_block_name',
+    'title'    => __('Block Name Fields', '__THEME_SLUG__'),
+    'fields'   => [
+        [
+            'key'   => 'field_title',
+            'label' => __('Title', '__THEME_SLUG__'),
+            'name'  => 'title',
+            'type'  => 'text',
+        ],
+        [
+            'key'   => 'field_description',
+            'label' => __('Description', '__THEME_SLUG__'),
+            'name'  => 'description',
+            'type'  => 'textarea',
+            'rows'  => 3,
+        ],
+    ],
+    'location' => [
+        [
+            [
+                'param'    => 'block',
+                'operator' => '==',
+                'value'    => 'acf/block-name',
+            ],
+        ],
+    ],
+]);
+```
+
+Cargar en `functions.php`:
+
+```php
+// Add to the $acf_files array in functions.php
+$acf_files = [
+    'ExampleCta',
+    'BlockName',  // your new block
+];
+```
+
+## Registro de Blocks
+
+Los blocks se registran en `includes/Theme/ThemeSetup.php`:
+
+```php
+private function register_acf_blocks(): void
+{
+    if (!function_exists('acf') || !function_exists('register_block_type')) {
+        return;
+    }
+
+    $blocks_dir = get_template_directory() . '/blocks';
+    $blocks = [
+        'example-cta',
+        // Add new blocks here
+    ];
+
+    foreach ($blocks as $block) {
+        $block_path = $blocks_dir . '/' . $block;
+        if (file_exists($block_path . '/block.json')) {
+            register_block_type($block_path);
+        }
+    }
+}
+```
+
+## Estilos SCSS
+
+1. Crear archivo SCSS en `resources/styles/sections/_block-name.scss`
+2. Importar en `resources/styles/frontend/main.scss`:
+
+```scss
+@use '../sections/block-name';
+```
+
+### Estructura de estilos recomendada
+
+```scss
+@use '../base/variables' as *;
+@use '../base/media-queries' as mq;
+
+.block-name {
+	&__container {
+		max-width: $container-width;
+		margin: 0 auto;
+		padding: $gutter-regular;
+	}
+
+	&__title {
+		font-size: $font-size-xxl;
+		font-weight: $font-weight-bold;
+		line-height: $line-height-heading;
+		color: $color-dark;
+		margin: 0;
+	}
+
+	&.alignwide {
+		.block-name__container {
+			max-width: 100%;
+		}
+	}
+
+	&.alignfull {
+		.block-name__container {
+			max-width: 100%;
+			padding: $gutter-regular $gutter-large;
+		}
+	}
+}
+```
+
+## Categorias de Blocks
+
+El tema usa categoria custom `__THEME_SLUG__`:
+
+```php
+private function register_block_categories(array $categories, $context): array
+{
+    $categories[] = [
+        'slug'  => '__THEME_SLUG__',
+        'title' => __('__THEME_NAME__', '__THEME_SLUG__'),
+        'icon'  => 'admin-site-alt3',
+    ];
+
+    return $categories;
+}
+```
+
+## Tipos de Blocks
+
+### Blocks Estructurales (unicos)
+Configuracion:
+```json
+"supports": {
+	"multiple": false,
+	"reusable": false
+}
+```
+
+### Blocks de Contenido (reutilizables)
+Configuracion:
+```json
+"supports": {
+	"anchor": true,
+	"align": ["wide", "full"],
+	"multiple": true
+}
+```
+
+## Workflow para Crear un Nuevo Block
+
+1. **Crear estructura**:
+   ```
+   blocks/my-block/
+   ├── block.json
+   └── render.php
+   ```
+
+2. **Configurar block.json** con las propiedades obligatorias
+
+3. **Crear render.php** con la estructura estandar
+
+4. **Crear campos ACF** en `includes/ACF/MyBlock.php`
+
+5. **Agregar al array** `$acf_files` en `functions.php`
+
+6. **Registrar block** en `ThemeSetup.php` (agregar al array `$blocks`)
+
+7. **Crear estilos** en `resources/styles/sections/_my-block.scss`
+
+8. **Importar estilos** en `resources/styles/frontend/main.scss`
+
+9. **Compilar**: `npm run dev` o `npm run build`
+
+## Buenas Practicas
+
+1. **Siempre** incluir `blockVersion: 3` y `autoInlineEditing: true`
+2. **Usar** categoria `__THEME_SLUG__` para blocks custom del tema
+3. **Seguir** nomenclatura BEM en clases CSS
+4. **Escapar** toda salida PHP con `esc_html()`, `esc_attr()`, `esc_url()`
+5. **Validar** datos de ACF antes de usar (usar `??` y valores default)
+6. **Documentar** con PHPDoc el proposito del block
+7. **Responsive**: Mobile-first, soportar tablet y desktop
+8. **Accessibility**: Usar HTML semantico, ARIA labels cuando necesario
+9. **Preview mode**: Siempre usar `"mode": "preview"` para mejor UX en editor
+
+## Block Editor: Estilos y Animaciones
+
+- **Vite en admin (critico)**: En el Site Editor **no** encolar el JS del frontend. Solo CSS con `enqueue_compiled_styles_only()`. Ver `project-structure.mdc` > Block Editor + Vite.
+
+## Ejemplo de Referencia
+
+Ver `blocks/example-cta/` para una implementacion completa con:
+- `block.json` - Configuracion del block
+- `render.php` - Template con campos ACF
+- `includes/ACF/ExampleCta.php` - Field group
+- `resources/styles/sections/_example-cta.scss` - Estilos

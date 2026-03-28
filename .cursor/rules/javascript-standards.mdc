@@ -1,0 +1,342 @@
+---
+description: Estándares y organización de JavaScript ES2026
+globs: ["**/resources/scripts/**/*.js", "**/resources/scripts/**/*.ts", "**/public/js/**/*.js"]
+alwaysApply: true
+---
+
+# Estándares de JavaScript ES2026
+
+## Organización
+
+- **Ubicación**: Todos los archivos JavaScript fuente en `resources/scripts/`
+- **Organización**: Separar por `components/`, `sections/`, `templates/`, `types/`, `frontend/`, y `admin/`
+- **Compilación**: Usar Vite 5 (vite.config.js)
+- **jQuery**: Disponible globalmente como `jQuery` (opcional, legacy support)
+- **Dependencias**: Gestionadas por npm, compiladas con Vite
+- **Convenciones**: camelCase para variables y funciones, PascalCase para clases, UPPER_SNAKE_CASE para constantes
+- **Módulos ES6**: Usar import/export para modularización
+- **Path aliases**: Usar `@/` para importar desde `resources/` (configurado en vite.config.js)
+- **Admin scripts**: Archivos relacionados con WordPress admin en `resources/scripts/admin/`
+
+## Flujo de Trabajo
+
+1. **Editar archivos fuente** en `resources/scripts/`
+   - `resources/scripts/frontend/main.ts` - Entry principal del frontend (TypeScript)
+   - `resources/scripts/admin/main.js` - Entry del admin (si existe)
+   - `resources/scripts/components/` - Componentes reutilizables
+   - `resources/scripts/sections/` - Scripts específicos de secciones
+   - `resources/scripts/templates/` - Scripts específicos de templates
+   - `resources/scripts/types/` - Definiciones de tipos TypeScript
+2. **Compilar** con `npm run dev` (desarrollo una vez), `npm run watch` (observar cambios), o `npm run production` (producción optimizada)
+3. **Archivos compilados** se generan en `public/js/` y `public/css/`
+4. **Manifest**: Vite genera `public/manifest.json` para mapear assets compilados
+5. **Carga**: Con assets compilados, encolar vía ThemeSetup/ViteHelper. El boilerplate solo encola `style.css`; al añadir JS/CSS custom, integrar con el manifest de Vite.
+6. **Admin / Block Editor:** el entry `main.ts` solo en `wp_enqueue_scripts` (frontend). En `enqueue_block_assets` + admin usar solo CSS (`ViteHelper::enqueue_compiled_styles_only`) — nunca el bundle JS en wp-admin (rompe Underscore y la Media Library de ACF). Ver `project-structure.mdc` → «Block Editor + Vite».
+6. **No editar directamente** los archivos en `public/` (se sobrescriben)
+
+## Características ES2026
+
+### Explicit Resource Management
+
+Usar `using` y `await using` para gestión automática de recursos:
+
+```javascript
+// Síncrono
+using file = await openFile('data.txt');
+// El archivo se cierra automáticamente al salir del scope
+
+// Asíncrono
+await using connection = await connectToDatabase();
+// La conexión se cierra automáticamente
+```
+
+### Error Handling Moderno
+
+```javascript
+// Error.isError() para verificación cross-realm
+if (Error.isError(value)) {
+  console.error(value.message);
+}
+
+// Try-catch con async/await
+try {
+  const data = await fetchData();
+  processData(data);
+} catch (error) {
+  if (Error.isError(error)) {
+    handleError(error);
+  }
+}
+```
+
+### Async Iteration
+
+```javascript
+// Array.fromAsync() para iterables asíncronos
+const results = await Array.fromAsync(asyncGenerator());
+
+// Procesamiento de streams
+async function* fetchPages() {
+  for (let i = 1; i <= 10; i++) {
+    yield await fetch(`/api/page/${i}`);
+  }
+}
+
+const pages = await Array.fromAsync(fetchPages());
+```
+
+### Promise Utilities
+
+```javascript
+// Promise.withResolvers() para creación manual de Promises
+const { promise, resolve, reject } = Promise.withResolvers();
+
+// Útil para bridges con callbacks
+function legacyAPIWrapper() {
+  const { promise, resolve, reject } = Promise.withResolvers();
+  legacyAPI((err, data) => {
+    if (err) reject(err);
+    else resolve(data);
+  });
+  return promise;
+}
+```
+
+## Immutability y Métodos No-Mutation
+
+Preferir métodos que no mutan el array original:
+
+```javascript
+// ✅ Correcto - No muta el original
+const sorted = items.toSorted((a, b) => a - b);
+const reversed = items.toReversed();
+const spliced = items.toSpliced(2, 1, 'newItem');
+const updated = items.with(0, 'newValue');
+
+// ❌ Evitar - Muta el original
+items.sort();
+items.reverse();
+items.splice(2, 1, 'newItem');
+```
+
+## Variables y Constantes
+
+```javascript
+// ✅ Usar const por defecto
+const MAX_RETRIES = 3;
+const apiUrl = '/api/data';
+const config = { timeout: 5000 };
+
+// ✅ Usar let solo cuando sea necesario reasignar
+let currentIndex = 0;
+let isLoading = false;
+
+// ❌ Nunca usar var
+var oldStyle = 'no usar'; // NO HACER ESTO
+```
+
+## Funciones Modernas
+
+### Arrow Functions
+
+```javascript
+// ✅ Arrow functions para callbacks y funciones cortas
+const numbers = [1, 2, 3, 4, 5];
+const doubled = numbers.map(n => n * 2);
+const evens = numbers.filter(n => n % 2 === 0);
+
+// ✅ Lexical this binding
+class Component {
+  constructor() {
+    this.value = 42;
+  }
+  
+  setupListener() {
+    button.addEventListener('click', () => {
+      console.log(this.value); // this se refiere a Component
+    });
+  }
+}
+```
+
+### Template Literals
+
+```javascript
+// ✅ Template literals para interpolación
+const name = 'Usuario';
+const greeting = `Hola, ${name}!`;
+
+// ✅ Multi-línea
+const html = `
+  <div class="card">
+    <h2>${title}</h2>
+    <p>${description}</p>
+  </div>
+`;
+```
+
+### Destructuring
+
+```javascript
+// ✅ Object destructuring
+const { name, email, role = 'user' } = userData;
+
+// ✅ Array destructuring
+const [first, second, ...rest] = items;
+
+// ✅ En parámetros de función
+function processUser({ id, name, email }) {
+  console.log(`Processing ${name} (${email})`);
+}
+```
+
+### Spread y Rest Operators
+
+```javascript
+// ✅ Spread para copiar/combinar
+const newArray = [...oldArray, newItem];
+const merged = { ...defaults, ...userConfig };
+
+// ✅ Rest parameters
+function sum(...numbers) {
+  return numbers.reduce((a, b) => a + b, 0);
+}
+```
+
+### Default Parameters
+
+```javascript
+// ✅ Valores por defecto
+function fetchData(url, options = {}) {
+  const { timeout = 5000, retries = 3 } = options;
+  // ...
+}
+```
+
+## Módulos ES6+
+
+```javascript
+// ✅ Import/Export
+import { fetchData, processData } from './api.js';
+import defaultExport from './utils.js';
+
+export const API_URL = '/api';
+export function helper() { /* ... */ }
+export default class MainClass { /* ... */ }
+
+// ✅ Top-level await (en módulos)
+const config = await fetch('/config.json').then(r => r.json());
+```
+
+## Defensive Coding
+
+```javascript
+// ✅ Validación de tipos
+function processData(data) {
+  if (!data || typeof data !== 'object') {
+    throw new TypeError('Data must be an object');
+  }
+  // ...
+}
+
+// ✅ Optional chaining
+const userName = user?.profile?.name ?? 'Guest';
+
+// ✅ Nullish coalescing
+const port = config.port ?? 3000;
+```
+
+## Logging Efectivo
+
+```javascript
+// ✅ Logging con contexto
+function processOrder(orderId) {
+  console.log(`[Order ${orderId}] Starting processing`);
+  
+  try {
+    // proceso
+    console.log(`[Order ${orderId}] Completed successfully`);
+  } catch (error) {
+    console.error(`[Order ${orderId}] Failed:`, {
+      error: error.message,
+      stack: error.stack,
+      orderId
+    });
+  }
+}
+
+// ❌ Logging genérico sin contexto
+console.log('error'); // NO HACER ESTO
+```
+
+## Organización de Código
+
+```javascript
+// ✅ Funciones pequeñas y enfocadas (5-10 líneas idealmente)
+function validateEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+function validateUser(user) {
+  return user.name && validateEmail(user.email);
+}
+
+// ✅ Un concepto por archivo
+// resources/scripts/components/button.js - solo componente button
+// resources/scripts/sections/header.js - solo sección header
+// resources/scripts/templates/home.js - solo template home
+```
+
+## Arquitectura de Componentes
+
+El tema usa un **sistema de inicialización unificado** con clases que tienen métodos estáticos `initializeAll()`:
+
+```javascript
+// resources/scripts/components/my-component.js
+export class MyComponent {
+  constructor(element) {
+    this.element = element;
+    this.init();
+  }
+
+  init() {
+    // Component initialization logic
+  }
+
+  // Static method for automatic initialization
+  static initializeAll() {
+    const elements = document.querySelectorAll('.my-component');
+    elements.forEach((element) => {
+      new MyComponent(element);
+    });
+  }
+}
+```
+
+**Entry Point (`resources/scripts/frontend/main.js`):**
+```javascript
+import { MyHeader } from '../sections/my-header';
+import { MyComponent } from '../components/my-component';
+import { MyTemplate } from '../templates/my-template';
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Components
+  MyComponent.initializeAll?.();
+  // Sections
+  MyHeader.initializeAll?.();
+  // Templates
+  MyTemplate.initializeAll?.();
+});
+```
+
+## Buenas Prácticas Generales
+
+1. **No usar estilos inline**: Usar clases CSS/SCSS en lugar de manipular estilos directamente
+2. **Código modular**: Organizar por funcionalidad, mantener archivos pequeños
+3. **Nombres descriptivos**: Variables y funciones con nombres claros (3-10 caracteres para variables)
+4. **Evitar sobre-abstracción**: Abstraer solo cuando hay necesidad real de reutilización
+5. **Consistencia**: Seguir las convenciones del proyecto
+6. **Performance**: Evitar re-renders innecesarios, implementar caching cuando sea apropiado
+7. **Comentarios útiles**: Documentar decisiones complejas, no lo obvio
+8. **Usar jQuery**: Disponible globalmente cuando sea necesario para compatibilidad

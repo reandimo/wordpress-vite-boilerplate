@@ -1,0 +1,738 @@
+---
+description: Estándares de accesibilidad web y ADA Compliance para WordPress 2026
+alwaysApply: true
+---
+
+# Estándares de Accesibilidad Web (ADA Compliance)
+
+Este proyecto sigue las **WCAG 2.1 Level AA** guidelines para garantizar accesibilidad y cumplimiento con ADA (Americans with Disabilities Act).
+
+## Principios Fundamentales (POUR)
+
+### Perceivable (Perceptible)
+- La información debe ser presentada de manera que los usuarios puedan percibirla
+- Proporcionar alternativas de texto para contenido no textual
+- Crear contenido que se pueda presentar de diferentes formas
+
+### Operable (Operable)
+- Los componentes de la interfaz deben ser operables
+- La navegación debe ser funcional con teclado
+- Dar tiempo suficiente a los usuarios para leer y usar el contenido
+
+### Understandable (Comprensible)
+- El texto debe ser legible y comprensible
+- Las páginas deben aparecer y operar de manera predecible
+- Ayudar a los usuarios a evitar y corregir errores
+
+### Robust (Robusto)
+- El contenido debe ser lo suficientemente robusto para ser interpretado por una amplia variedad de tecnologías de usuario
+- Maximizar la compatibilidad con herramientas de asistencia actuales y futuras
+
+## HTML Semántico
+
+### Estructura Semántica
+
+```html
+<!-- ✅ Correcto - Uso de elementos semánticos -->
+<header>
+  <nav aria-label="Navegación principal">
+    <ul>
+      <li><a href="/">Inicio</a></li>
+      <li><a href="/about">Acerca de</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main>
+  <article>
+    <h1>Título del artículo</h1>
+    <section>
+      <h2>Sección 1</h2>
+      <p>Contenido...</p>
+    </section>
+  </article>
+</main>
+
+<aside aria-label="Información adicional">
+  <h2>Contenido relacionado</h2>
+</aside>
+
+<footer>
+  <p>&copy; 2026 Green Compass</p>
+</footer>
+
+<!-- ❌ Evitar - Uso de divs genéricos -->
+<div class="header">
+  <div class="nav">
+    <div class="menu-item">Inicio</div>
+  </div>
+</div>
+```
+
+### Jerarquía de Encabezados
+
+```html
+<!-- ✅ Correcto - Jerarquía lógica -->
+<h1>Página Principal</h1>
+  <h2>Sección Principal</h2>
+    <h3>Subsección</h3>
+      <h4>Detalle</h4>
+  <h2>Otra Sección</h2>
+    <h3>Subsección</h3>
+
+<!-- ❌ Incorrecto - Saltar niveles -->
+<h1>Página Principal</h1>
+  <h3>Subsección</h3> <!-- ❌ Saltó h2 -->
+```
+
+## ARIA (Accessible Rich Internet Applications)
+
+### ARIA Labels y Descriptions
+
+```html
+<!-- ✅ Etiquetas descriptivas -->
+<button aria-label="Cerrar menú de navegación">
+  <span aria-hidden="true">×</span>
+</button>
+
+<nav aria-label="Navegación principal">
+  <ul>
+    <li><a href="/" aria-current="page">Inicio</a></li>
+  </ul>
+</nav>
+
+<!-- ✅ Descripciones adicionales -->
+<input 
+  type="text" 
+  id="search" 
+  aria-label="Buscar en el sitio"
+  aria-describedby="search-help"
+>
+<span id="search-help" class="sr-only">
+  Ingrese su término de búsqueda aquí
+</span>
+
+<!-- ✅ Estados y propiedades -->
+<button 
+  aria-expanded="false" 
+  aria-controls="menu"
+  aria-label="Abrir menú"
+>
+  Menú
+</button>
+<div id="menu" aria-hidden="true">
+  <!-- Contenido del menú -->
+</div>
+```
+
+### ARIA Landmarks
+
+```html
+<!-- ✅ Uso de landmarks -->
+<header role="banner">
+  <!-- Header content -->
+</header>
+
+<nav role="navigation" aria-label="Principal">
+  <!-- Navigation -->
+</nav>
+
+<main role="main">
+  <!-- Main content -->
+</main>
+
+<aside role="complementary" aria-label="Sidebar">
+  <!-- Sidebar content -->
+</aside>
+
+<footer role="contentinfo">
+  <!-- Footer content -->
+</footer>
+```
+
+### ARIA Live Regions
+
+```html
+<!-- ✅ Para contenido dinámico -->
+<div 
+  role="alert" 
+  aria-live="assertive"
+  aria-atomic="true"
+>
+  Error: El formulario no se pudo enviar
+</div>
+
+<div 
+  role="status" 
+  aria-live="polite"
+  aria-atomic="true"
+>
+  Cargando resultados...
+</div>
+```
+
+## Navegación por Teclado
+
+### Focus Management
+
+```javascript
+// ✅ Manejo adecuado del focus
+function openModal() {
+  const modal = document.getElementById('modal');
+  modal.classList.add('active');
+  modal.setAttribute('aria-hidden', 'false');
+  
+  // Mover focus al modal
+  const firstFocusable = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+  if (firstFocusable) {
+    firstFocusable.focus();
+  }
+  
+  // Atrapar el focus dentro del modal
+  trapFocus(modal);
+}
+
+function closeModal() {
+  const modal = document.getElementById('modal');
+  modal.classList.remove('active');
+  modal.setAttribute('aria-hidden', 'true');
+  
+  // Devolver focus al elemento que abrió el modal
+  const trigger = document.querySelector('[data-modal-trigger]');
+  if (trigger) {
+    trigger.focus();
+  }
+}
+
+// ✅ Trap focus dentro de un contenedor
+function trapFocus(container) {
+  const focusableElements = container.querySelectorAll(
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+  );
+  
+  const firstElement = focusableElements[0];
+  const lastElement = focusableElements[focusableElements.length - 1];
+  
+  container.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+      if (e.shiftKey) {
+        if (document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement.focus();
+        }
+      } else {
+        if (document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement.focus();
+        }
+      }
+    }
+  });
+}
+```
+
+### Indicadores Visuales de Focus
+
+```scss
+// ✅ Estilos de focus visibles
+button:focus,
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid var(--color-focus, #0066cc);
+  outline-offset: 2px;
+}
+
+// ✅ Focus solo para navegación por teclado (no mouse)
+.js-focus-visible button:focus:not(.focus-visible),
+.js-focus-visible a:focus:not(.focus-visible) {
+  outline: none;
+}
+
+.js-focus-visible button.focus-visible,
+.js-focus-visible a.focus-visible {
+  outline: 2px solid var(--color-focus, #0066cc);
+  outline-offset: 2px;
+}
+
+// ✅ Skip links
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--color-primary);
+  color: white;
+  padding: 8px;
+  text-decoration: none;
+  z-index: 100;
+  
+  &:focus {
+    top: 0;
+  }
+}
+```
+
+## Contraste de Colores
+
+### Ratios de Contraste WCAG
+
+```scss
+// ✅ Cumplir con ratios mínimos
+// Texto normal (menos de 18px o 14px bold): 4.5:1
+// Texto grande (18px+ o 14px+ bold): 3:1
+// Componentes UI: 3:1
+
+// Ejemplos de colores con buen contraste
+$color-text: #333333; // Contraste 12.6:1 sobre blanco
+$color-text-light: #666666; // Contraste 7:1 sobre blanco
+$color-primary: #0066cc; // Contraste 7:1 sobre blanco
+$color-error: #cc0000; // Contraste 5.1:1 sobre blanco
+
+// ❌ Evitar - Colores con bajo contraste
+$color-text-bad: #cccccc; // Contraste 1.6:1 sobre blanco - NO CUMPLE
+```
+
+### No Depender Solo del Color
+
+```html
+<!-- ✅ Correcto - Usar color + icono/texto -->
+<button class="button button--error">
+  <span aria-hidden="true">⚠️</span>
+  <span>Eliminar</span>
+</button>
+
+<!-- ✅ Correcto - Usar color + patrón -->
+<div class="chart">
+  <div class="bar" style="background: repeating-linear-gradient(45deg, #0066cc, #0066cc 10px, #004499 10px, #004499 20px);">
+    <span class="sr-only">Serie A: 45%</span>
+  </div>
+</div>
+
+<!-- ❌ Incorrecto - Solo color -->
+<button style="color: red;">Eliminar</button>
+```
+
+## Imágenes y Multimedia
+
+### Texto Alternativo
+
+```html
+<!-- ✅ Imagen decorativa -->
+<img 
+  src="decoration.jpg" 
+  alt="" 
+  aria-hidden="true"
+>
+
+<!-- ✅ Imagen informativa -->
+<img 
+  src="chart.jpg" 
+  alt="Gráfico mostrando crecimiento de ventas del 15% en Q1 2026"
+>
+
+<!-- ✅ Imagen con descripción larga -->
+<img 
+  src="diagram.jpg" 
+  alt="Diagrama de flujo del proceso"
+  aria-describedby="diagram-description"
+>
+<div id="diagram-description" class="sr-only">
+  El proceso comienza con la recepción de datos, luego se procesan...
+</div>
+
+<!-- ✅ Imágenes de fondo con contenido importante -->
+<div 
+  class="hero" 
+  role="img" 
+  aria-label="Equipo de trabajo colaborando en oficina moderna"
+  style="background-image: url('team.jpg');"
+>
+  <h1>Nuestro Equipo</h1>
+</div>
+```
+
+### Video y Audio
+
+```html
+<!-- ✅ Video con subtítulos y transcripción -->
+<video controls>
+  <source src="video.mp4" type="video/mp4">
+  <track 
+    kind="subtitles" 
+    src="subtitles-es.vtt" 
+    srclang="es" 
+    label="Español"
+    default
+  >
+  <track 
+    kind="captions" 
+    src="captions-es.vtt" 
+    srclang="es" 
+    label="Español"
+  >
+  Tu navegador no soporta video HTML5.
+</video>
+
+<a href="transcript.txt" class="video-transcript">
+  Ver transcripción del video
+</a>
+
+<!-- ✅ Audio con transcripción -->
+<audio controls>
+  <source src="audio.mp3" type="audio/mpeg">
+  Tu navegador no soporta audio HTML5.
+</audio>
+<a href="transcript.txt">Ver transcripción</a>
+```
+
+## Formularios Accesibles
+
+### Labels y Asociaciones
+
+```html
+<!-- ✅ Label explícito -->
+<label for="email">Correo electrónico</label>
+<input 
+  type="email" 
+  id="email" 
+  name="email" 
+  required
+  aria-required="true"
+>
+
+<!-- ✅ Label implícito -->
+<label>
+  Nombre completo
+  <input type="text" name="name" required>
+</label>
+
+<!-- ✅ aria-label cuando no hay label visible -->
+<input 
+  type="search" 
+  aria-label="Buscar productos"
+  placeholder="Buscar..."
+>
+
+<!-- ✅ aria-describedby para ayuda -->
+<label for="password">Contraseña</label>
+<input 
+  type="password" 
+  id="password" 
+  name="password"
+  aria-describedby="password-help password-requirements"
+  required
+>
+<span id="password-help" class="help-text">
+  La contraseña debe tener al menos 8 caracteres
+</span>
+<ul id="password-requirements" class="sr-only">
+  <li>Mínimo 8 caracteres</li>
+  <li>Al menos una mayúscula</li>
+  <li>Al menos un número</li>
+</ul>
+```
+
+### Mensajes de Error
+
+```html
+<!-- ✅ Errores asociados con aria-describedby -->
+<label for="email">Correo electrónico</label>
+<input 
+  type="email" 
+  id="email" 
+  name="email"
+  aria-invalid="true"
+  aria-describedby="email-error"
+  required
+>
+<span id="email-error" role="alert" class="error-message">
+  Por favor ingrese un correo electrónico válido
+</span>
+
+<!-- ✅ JavaScript para actualizar estados -->
+function validateEmail(input) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const isValid = emailRegex.test(input.value);
+  
+  if (!isValid) {
+    input.setAttribute('aria-invalid', 'true');
+    input.setAttribute('aria-describedby', 'email-error');
+  } else {
+    input.removeAttribute('aria-invalid');
+    input.removeAttribute('aria-describedby');
+  }
+  
+  return isValid;
+}
+```
+
+### Campos Requeridos
+
+```html
+<!-- ✅ Indicar campos requeridos -->
+<label for="name">
+  Nombre completo
+  <span aria-label="requerido">*</span>
+</label>
+<input 
+  type="text" 
+  id="name" 
+  name="name"
+  required
+  aria-required="true"
+>
+
+<!-- ✅ Estilos para campos requeridos -->
+label[aria-label="requerido"]::after {
+  content: '*';
+  color: var(--color-error);
+  margin-left: 0.25em;
+}
+```
+
+## Screen Readers
+
+### Clases para Screen Readers
+
+```scss
+// ✅ Clase para ocultar visualmente pero mantener accesible
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+// ✅ Clase para ocultar completamente
+.sr-hidden {
+  display: none !important;
+}
+
+// ✅ Mostrar solo para screen readers
+.sr-only-focusable:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: inherit;
+  margin: inherit;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+```
+
+### Uso de sr-only
+
+```html
+<!-- ✅ Agregar contexto para screen readers -->
+<button class="icon-button">
+  <span class="icon" aria-hidden="true">🗑️</span>
+  <span class="sr-only">Eliminar elemento</span>
+</button>
+
+<nav aria-label="Breadcrumb">
+  <ol>
+    <li><a href="/">Inicio</a></li>
+    <li><a href="/products">Productos</a></li>
+    <li aria-current="page">Detalle del producto</li>
+  </ol>
+</nav>
+
+<!-- ✅ Indicar estado de carga -->
+<div role="status" aria-live="polite" aria-atomic="true">
+  <span class="sr-only">Cargando contenido, por favor espere</span>
+  <div class="spinner" aria-hidden="true"></div>
+</div>
+```
+
+## Animaciones y Movimiento
+
+### Prefers Reduced Motion
+
+```scss
+// ✅ Respetar preferencias de movimiento reducido
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+// ✅ Animaciones controladas
+.animated-element {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animated-element {
+    animation: none;
+  }
+}
+```
+
+### JavaScript para Detectar Preferencias
+
+```javascript
+// ✅ Detectar preferencia de movimiento reducido
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+if (prefersReducedMotion.matches) {
+  // Deshabilitar animaciones
+  document.documentElement.classList.add('reduced-motion');
+}
+
+// Escuchar cambios
+prefersReducedMotion.addEventListener('change', (e) => {
+  if (e.matches) {
+    document.documentElement.classList.add('reduced-motion');
+  } else {
+    document.documentElement.classList.remove('reduced-motion');
+  }
+});
+```
+
+## WordPress Específico
+
+### Enqueue de Scripts Accesibles
+
+```php
+// ✅ Agregar atributos de accesibilidad a scripts
+function enqueue_accessible_scripts(): void {
+    wp_enqueue_script(
+        'main-script',
+        get_template_directory_uri() . '/public/js/main.js',
+        [],
+        THEME_VERSION,
+        true
+    );
+    
+    // Agregar datos para accesibilidad
+    wp_localize_script('main-script', 'accessibilityData', [
+        'skipLinkText' => __('Saltar al contenido principal', 'textdomain'),
+        'closeModalText' => __('Cerrar modal', 'textdomain'),
+    ]);
+}
+add_action('wp_enqueue_scripts', 'enqueue_accessible_scripts');
+```
+
+### Template Parts Accesibles
+
+```html
+<!-- ✅ parts/header.html -->
+<header role="banner">
+  <a href="#main-content" class="skip-link">
+    <?php esc_html_e('Saltar al contenido principal', 'textdomain'); ?>
+  </a>
+  
+  <nav role="navigation" aria-label="<?php esc_attr_e('Navegación principal', 'textdomain'); ?>">
+    <?php
+    wp_nav_menu([
+        'theme_location' => 'primary',
+        'container' => false,
+        'menu_class' => 'nav-menu',
+        'items_wrap' => '<ul class="%2$s">%3$s</ul>',
+    ]);
+    ?>
+  </nav>
+</header>
+
+<!-- ✅ templates/index.html -->
+<main id="main-content" role="main">
+  <?php
+  if (have_posts()) {
+      while (have_posts()) {
+          the_post();
+          get_template_part('parts/content', get_post_type());
+      }
+  }
+  ?>
+</main>
+```
+
+### Breadcrumbs Accesibles
+
+```php
+// ✅ Función para breadcrumbs accesibles
+function get_accessible_breadcrumbs(): string {
+    $items = [];
+    $items[] = '<li><a href="' . esc_url(home_url('/')) . '">' . esc_html__('Inicio', 'textdomain') . '</a></li>';
+    
+    if (is_single()) {
+        $items[] = '<li><a href="' . esc_url(get_permalink(get_option('page_for_posts'))) . '">' . esc_html__('Blog', 'textdomain') . '</a></li>';
+        $items[] = '<li aria-current="page">' . esc_html(get_the_title()) . '</li>';
+    }
+    
+    return '<nav aria-label="' . esc_attr__('Breadcrumb', 'textdomain') . '">
+        <ol class="breadcrumb">' . implode('', $items) . '</ol>
+    </nav>';
+}
+```
+
+## Testing de Accesibilidad
+
+### Herramientas Recomendadas
+
+```bash
+# Lighthouse (Chrome DevTools)
+# - Ejecutar auditoría de accesibilidad
+# - Puntuación objetivo: 100/100
+
+# WAVE (Web Accessibility Evaluation Tool)
+# - Extensión de navegador
+# - Identifica problemas de accesibilidad
+
+# axe DevTools
+# - Extensión de navegador
+# - Análisis automático de accesibilidad
+
+# Pa11y
+npm install -g pa11y
+pa11y https://example.com
+
+# ESLint con eslint-plugin-jsx-a11y
+npm install --save-dev eslint-plugin-jsx-a11y
+```
+
+### Checklist de Accesibilidad
+
+- [ ] Todos los elementos interactivos son accesibles por teclado
+- [ ] Todos los elementos tienen indicadores de focus visibles
+- [ ] Todas las imágenes tienen texto alternativo apropiado
+- [ ] El contraste de colores cumple con WCAG AA (4.5:1 para texto normal)
+- [ ] Los formularios tienen labels asociados
+- [ ] Los mensajes de error son descriptivos y accesibles
+- [ ] La estructura semántica HTML es correcta (h1-h6, landmarks)
+- [ ] ARIA se usa correctamente cuando es necesario
+- [ ] Las animaciones respetan prefers-reduced-motion
+- [ ] El sitio es navegable solo con teclado
+- [ ] Los screen readers pueden leer todo el contenido importante
+- [ ] No hay dependencia exclusiva del color para transmitir información
+
+## Recursos Adicionales
+
+- [WCAG 2.1 Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
+- [WebAIM](https://webaim.org/)
+- [A11y Project](https://www.a11yproject.com/)
+- [ARIA Authoring Practices Guide](https://www.w3.org/WAI/ARIA/apg/)
+- [WordPress Accessibility Handbook](https://make.wordpress.org/accessibility/handbook/)
+
+## Buenas Prácticas Generales
+
+1. **Probar con teclado**: Navegar todo el sitio solo con teclado
+2. **Probar con screen reader**: Usar NVDA (Windows) o VoiceOver (Mac)
+3. **Verificar contraste**: Usar herramientas como WebAIM Contrast Checker
+4. **Validar HTML**: Usar validadores W3C
+5. **Probar en diferentes navegadores**: Chrome, Firefox, Safari, Edge
+6. **Incluir usuarios con discapacidades**: En el proceso de testing
+7. **Documentar decisiones**: Cuando se hacen excepciones a las guidelines
+8. **Mantener actualizado**: Revisar regularmente las prácticas de accesibilidad

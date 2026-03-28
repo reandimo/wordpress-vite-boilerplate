@@ -1,0 +1,562 @@
+---
+description: Estándares de código PHP 8.2 y WordPress 2026
+globs: ["**/*.php"]
+alwaysApply: true
+---
+
+# Estándares de Código PHP 8.2
+
+## PHP General
+
+- **Versión**: PHP 8.2+ recomendado
+- **Estándar**: Seguir **PSR-12** (evolución de PSR-2)
+- **Nombres de clases**: PascalCase (ej: `CommonHelper`, `WoocommerceAdmin`)
+- **Nombres de funciones**: snake_case (ej: `get_user_friendly_schedule_info()`)
+- **Nombres de variables**: snake_case o camelCase (consistente en el proyecto)
+- **Constantes**: UPPER_SNAKE_CASE
+- **Espaciado**: 4 espacios (no tabs)
+- **Líneas máximas**: 120 caracteres recomendado
+
+## Características PHP 8.2
+
+### Readonly Classes
+
+```php
+// ✅ Clases readonly - todas las propiedades son readonly
+readonly class User {
+    public function __construct(
+        public string $id,
+        public string $name,
+        public string $email,
+        public DateTime $createdAt
+    ) {}
+}
+
+// Uso
+$user = new User('123', 'John', 'john@example.com', new DateTime());
+// $user->name = 'Jane'; // Error: no se puede modificar
+```
+
+### Disjunctive Normal Form (DNF) Types
+
+```php
+// ✅ Tipos complejos con DNF
+function process((A&B)|null $value): (X&Y)|null {
+    // ...
+}
+
+// Ejemplo práctico
+function save((\PDO&\LoggerInterface)|null $connection): void {
+    if ($connection instanceof \PDO) {
+        // Guardar en base de datos
+    }
+}
+```
+
+### Constants in Traits
+
+```php
+// ✅ Constantes en traits
+trait Loggable {
+    public const LOG_LEVEL_ERROR = 'error';
+    public const LOG_LEVEL_INFO = 'info';
+    
+    public function log(string $message, string $level = self::LOG_LEVEL_INFO): void {
+        error_log("[{$level}] {$message}");
+    }
+}
+
+class UserService {
+    use Loggable;
+    
+    public function process(): void {
+        $this->log('Processing user', self::LOG_LEVEL_INFO);
+    }
+}
+```
+
+### Deprecate Dynamic Properties
+
+```php
+// ✅ Declarar todas las propiedades explícitamente
+class User {
+    public string $name;
+    public string $email;
+    
+    public function __construct(string $name, string $email) {
+        $this->name = $name;
+        $this->email = $email;
+    }
+}
+
+// ❌ Evitar propiedades dinámicas
+$user = new User('John', 'john@example.com');
+// $user->age = 30; // Deprecated en PHP 8.2
+```
+
+## Características PHP 8.1 (Compatibles con 8.2)
+
+### Enums
+
+```php
+// ✅ Usar enums para conjuntos fijos de valores
+enum UserRole: string {
+    case Admin = 'admin';
+    case Editor = 'editor';
+    case Subscriber = 'subscriber';
+    
+    public function label(): string {
+        return match($this) {
+            self::Admin => 'Administrador',
+            self::Editor => 'Editor',
+            self::Subscriber => 'Suscriptor',
+        };
+    }
+    
+    public function canEdit(): bool {
+        return match($this) {
+            self::Admin, self::Editor => true,
+            self::Subscriber => false,
+        };
+    }
+}
+
+// Uso
+function assignRole(User $user, UserRole $role): void {
+    $user->role = $role;
+}
+
+assignRole($user, UserRole::Admin);
+```
+
+### Readonly Properties
+
+```php
+// ✅ Propiedades readonly individuales
+class User {
+    public function __construct(
+        public readonly string $id,
+        public readonly DateTime $createdAt,
+        public string $name,
+        public string $email
+    ) {}
+}
+
+$user = new User('123', new DateTime(), 'John', 'john@example.com');
+$user->name = 'Jane'; // ✅ OK
+// $user->id = '456'; // ❌ Error: readonly
+```
+
+### First-class Callable Syntax
+
+```php
+// ✅ Sintaxis moderna para callables
+$fn = strlen(...);
+$result = $fn('hello'); // 5
+
+// Array functions
+$lengths = array_map(strlen(...), $strings);
+
+// Métodos de instancia
+$validator = $user->validate(...);
+$isValid = $validator($data);
+```
+
+## Características PHP 8.0 (Compatibles con 8.2)
+
+### Named Arguments
+
+```php
+// ✅ Argumentos nombrados para mayor claridad
+function createUser(
+    string $name,
+    string $email,
+    string $role = 'subscriber',
+    bool $active = true
+): User {
+    // ...
+}
+
+// Uso con argumentos nombrados
+$user = createUser(
+    name: 'John Doe',
+    email: 'john@example.com',
+    role: 'admin'
+);
+```
+
+### Constructor Property Promotion
+
+```php
+// ✅ Promoción de propiedades en constructor
+class User {
+    public function __construct(
+        private string $name,
+        private string $email,
+        private UserRole $role = UserRole::Subscriber
+    ) {}
+    
+    public function getName(): string {
+        return $this->name;
+    }
+}
+```
+
+### Union Types
+
+```php
+// ✅ Union types
+function process(int|float $number): int|float {
+    return $number * 2;
+}
+
+function find(int|string $id): User|null {
+    // ...
+}
+```
+
+### Match Expression
+
+```php
+// ✅ Match expression (mejor que switch)
+$message = match($status) {
+    'pending' => 'Pendiente',
+    'approved' => 'Aprobado',
+    'rejected' => 'Rechazado',
+    default => 'Desconocido'
+};
+
+// Con condiciones
+$price = match(true) {
+    $age < 18 => 10,
+    $age >= 18 && $age < 65 => 20,
+    $age >= 65 => 15,
+};
+```
+
+### Nullsafe Operator
+
+```php
+// ✅ Nullsafe operator
+$country = $user?->getAddress()?->getCountry()?->getName();
+
+// Equivalente a:
+$country = null;
+if ($user !== null) {
+    $address = $user->getAddress();
+    if ($address !== null) {
+        $countryObj = $address->getCountry();
+        if ($countryObj !== null) {
+            $country = $countryObj->getName();
+        }
+    }
+}
+```
+
+## Strong Typing
+
+```php
+// ✅ Usar strict types
+declare(strict_types=1);
+
+// ✅ Type declarations completos
+class UserService {
+    public function __construct(
+        private readonly DatabaseConnection $db,
+        private readonly LoggerInterface $logger,
+        private readonly CacheInterface $cache
+    ) {}
+    
+    public function getUser(int $id): ?User {
+        $cacheKey = "user_{$id}";
+        
+        // Intentar obtener de cache
+        $cached = $this->cache->get($cacheKey);
+        if ($cached instanceof User) {
+            return $cached;
+        }
+        
+        try {
+            $data = $this->db->query('SELECT * FROM users WHERE id = ?', [$id]);
+            
+            if (!$data) {
+                return null;
+            }
+            
+            $user = new User(
+                id: $data['id'],
+                name: $data['name'],
+                email: $data['email'],
+                role: UserRole::from($data['role'])
+            );
+            
+            $this->cache->set($cacheKey, $user, 3600);
+            
+            return $user;
+        } catch (DatabaseException $e) {
+            $this->logger->error('Failed to fetch user', [
+                'id' => $id,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+    
+    public function saveUser(User $user): void {
+        // ...
+    }
+}
+```
+
+## WordPress
+
+### Seguridad
+
+```php
+// ✅ Siempre escapar salida
+echo esc_html($user_name);
+echo esc_attr($field_value);
+echo esc_url($link);
+echo wp_kses_post($content);
+
+// ✅ Sanitizar entrada
+$clean_email = sanitize_email($_POST['email'] ?? '');
+$clean_text = sanitize_text_field($_POST['name'] ?? '');
+
+// ✅ Verificar nonces
+if (!isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'my_action')) {
+    wp_die('Security check failed');
+}
+
+// ✅ Verificar capabilities
+if (!current_user_can('manage_options')) {
+    wp_die('Unauthorized');
+}
+```
+
+### Direct Access Protection
+
+```php
+// ✅ Siempre al inicio de archivos PHP
+<?php
+declare(strict_types=1);
+
+defined('ABSPATH') || exit;
+```
+
+### Hooks y Filters
+
+```php
+// ✅ Usar prefijos del tema (ej: __THEME_SLUG__)
+add_action('init', '__THEME_SLUG___init');
+add_filter('the_content', '__THEME_SLUG___modify_content');
+
+// ✅ Usar closures cuando sea apropiado
+add_action('wp_enqueue_scripts', function(): void {
+    wp_enqueue_style('__THEME_SLUG__-style', get_stylesheet_uri(), [], THEME_VERSION);
+    wp_enqueue_script('__THEME_SLUG__-script', THEME_URI . '/public/js/main.js', [], THEME_VERSION, true);
+});
+
+// ✅ Usar clases para organizar hooks
+class ThemeSetup {
+    public function __construct() {
+        add_action('after_setup_theme', $this->setupTheme(...));
+        add_action('wp_enqueue_scripts', $this->enqueueAssets(...));
+    }
+    
+    private function setupTheme(): void {
+        add_theme_support('post-thumbnails');
+        add_theme_support('title-tag');
+        register_nav_menus([
+            'primary' => __('Primary Menu', '__THEME_SLUG__'),
+            'footer' => __('Footer Menu', '__THEME_SLUG__'),
+        ]);
+    }
+    
+    private function enqueueAssets(): void {
+        wp_enqueue_style('__THEME_SLUG__-style', get_stylesheet_uri(), [], THEME_VERSION);
+    }
+}
+
+new ThemeSetup();
+```
+
+## Composer y Autoloading
+
+```php
+// ✅ Usar Composer para dependencias
+require_once __DIR__ . '/vendor/autoload.php';
+
+// composer.json
+{
+    "require": {
+        "php": "^8.2",
+        "monolog/monolog": "^3.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0",
+        "squizlabs/php_codesniffer": "^3.7",
+        "phpstan/phpstan": "^1.10"
+    },
+    "autoload": {
+        "psr-4": {
+            "__NAMESPACE__\\": "includes/"
+        }
+    }
+}
+```
+
+## Exception Handling
+
+```php
+// ✅ Usar exceptions personalizadas
+class UserNotFoundException extends Exception {}
+class ValidationException extends Exception {}
+
+function getUser(int $id): User {
+    $user = $db->find($id);
+    
+    if (!$user) {
+        throw new UserNotFoundException("User {$id} not found");
+    }
+    
+    return $user;
+}
+
+// ✅ Catch específico
+try {
+    $user = getUser(123);
+    processUser($user);
+} catch (UserNotFoundException $e) {
+    error_log($e->getMessage());
+    wp_die('Usuario no encontrado');
+} catch (ValidationException $e) {
+    error_log($e->getMessage());
+    wp_die('Error de validación: ' . esc_html($e->getMessage()));
+} catch (Exception $e) {
+    error_log('Unexpected error: ' . $e->getMessage());
+    wp_die('Error inesperado');
+}
+```
+
+## Inclusión de Archivos
+
+```php
+// ✅ Usar rutas absolutas con constantes
+require_once THEME_DIR . '/includes/CommonHelper.php';
+include_once THEME_DIR . '/includes/WoocommerceAdmin.php';
+
+// ✅ O usar autoloading (preferido)
+use MyTheme\Helpers\CommonHelper;
+use MyTheme\Woocommerce\WoocommerceAdmin;
+
+$helper = new CommonHelper();
+$wooAdmin = new WoocommerceAdmin();
+```
+
+## Constantes del Tema
+
+```php
+// functions.php
+define('THEME_DIR', get_template_directory());
+define('THEME_URI', get_template_directory_uri());
+define('THEME_VERSION', wp_get_theme()->get('Version'));
+define('THEME_SITENAME', get_bloginfo('name'));
+```
+
+## Performance Optimization
+
+```php
+// ✅ Usar OPcache en producción (php.ini)
+opcache.enable=1
+opcache.memory_consumption=128
+opcache.interned_strings_buffer=8
+opcache.max_accelerated_files=10000
+opcache.validate_timestamps=0  // En producción
+
+// ✅ Usar caching
+function get_user_data(int $user_id): array {
+    $cache_key = "user_data_{$user_id}";
+    $data = wp_cache_get($cache_key);
+
+    if (false === $data) {
+        $data = expensive_database_query($user_id);
+        wp_cache_set($cache_key, $data, '', 3600);
+    }
+
+    return $data;
+}
+
+// ✅ Usar transients para datos que cambian poco
+function get_popular_posts(): array {
+    $posts = get_transient('popular_posts');
+    
+    if (false === $posts) {
+        $posts = expensive_query_for_popular_posts();
+        set_transient('popular_posts', $posts, DAY_IN_SECONDS);
+    }
+    
+    return $posts;
+}
+```
+
+## Testing
+
+```php
+// ✅ Usar PHPUnit para testing
+use PHPUnit\Framework\TestCase;
+
+class UserServiceTest extends TestCase {
+    private UserService $service;
+    
+    protected function setUp(): void {
+        $this->service = new UserService(
+            $this->createMock(DatabaseConnection::class),
+            $this->createMock(LoggerInterface::class),
+            $this->createMock(CacheInterface::class)
+        );
+    }
+    
+    public function test_get_user_returns_user(): void {
+        $user = $this->service->getUser(1);
+        
+        $this->assertInstanceOf(User::class, $user);
+        $this->assertEquals('John', $user->getName());
+    }
+    
+    public function test_get_user_throws_exception_when_not_found(): void {
+        $this->expectException(UserNotFoundException::class);
+        $this->service->getUser(999);
+    }
+}
+```
+
+## Coding Standards Tools
+
+```bash
+# Instalar herramientas
+composer require --dev squizlabs/php_codesniffer
+composer require --dev phpstan/phpstan
+
+# Ejecutar PHPCS
+./vendor/bin/phpcs --standard=PSR12 includes/
+
+# Auto-fix con PHPCBF
+./vendor/bin/phpcbf --standard=PSR12 includes/
+
+# Análisis estático con PHPStan
+./vendor/bin/phpstan analyse includes/ --level=8
+```
+
+## Buenas Prácticas Generales
+
+1. **Siempre usar strict types**: `declare(strict_types=1);` al inicio de archivos
+2. **Preferir readonly**: Para clases y propiedades inmutables
+3. **Usar enums**: Para conjuntos fijos de valores
+4. **Documentar con PHPDoc**: Especialmente para APIs públicas y tipos complejos
+5. **Evitar variables globales**: Usar dependency injection
+6. **Código limpio**: Funciones pequeñas, responsabilidad única
+7. **Seguridad primero**: Validar entrada, escapar salida, verificar permisos
+8. **Testing**: Escribir tests para lógica crítica
+9. **Performance**: Usar caching, optimizar queries, habilitar OPcache
+10. **Mantenerse actualizado**: Adoptar nuevas características de PHP 8.2

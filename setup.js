@@ -200,7 +200,7 @@ function promptYesNo(rl, question, defaultValue = 'n') {
 // ---------------------------------------------------------------------------
 
 const TEXT_EXTENSIONS = new Set([
-  '.php', '.js', '.ts', '.scss', '.css', '.json', '.html', '.md',
+  '.php', '.js', '.ts', '.scss', '.css', '.json', '.html', '.md', '.mdc',
   '.yml', '.yaml', '.xml', '.txt', '.sh', '.env', '.editorconfig',
   '.gitignore', '.htaccess', '.conf',
 ]);

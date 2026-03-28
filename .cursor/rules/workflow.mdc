@@ -1,0 +1,181 @@
+---
+description: Flujo de trabajo Bedrock + Docker y comandos utiles 2026
+alwaysApply: true
+---
+
+# Flujo de Trabajo
+
+## Entorno (Bedrock + Docker)
+
+- **Bedrock**: Estructura en `app/` con config en `app/config/application.php`.
+- **Docker**: `docker-compose.yml` con PHP-FPM, Nginx, MariaDB, MailHog, phpMyAdmin.
+- **Tema**: Ruta en `app/web/app/themes/__THEME_SLUG__/`.
+- **WordPress core**: Instalado via Composer en `app/web/wp/` (gitignored).
+
+## Setup Inicial
+
+```bash
+# 1. Copiar archivos de entorno
+cp .env.example .env
+cp app/.env.example app/.env
+
+# 2. Editar app/.env (DB_HOST=db, WP_HOME=http://localhost, salts)
+# Generar salts: https://roots.io/salts.html
+
+# 3. Instalar dependencias de Bedrock
+cd app
+composer install
+
+# 4. Levantar Docker
+cd ..
+docker compose up -d
+
+# 5. Instalar dependencias del tema
+cd app/web/app/themes/__THEME_SLUG__
+npm install
+
+# 6. Iniciar desarrollo con HMR
+npm run dev
+
+# 7. Abrir sitio: http://localhost
+# phpMyAdmin: http://localhost:8080
+# MailHog: http://localhost:8025
+```
+
+## Assets (CSS/JS/fuentes) con HMR
+
+1. **Site Editor:** el tema no debe cargar el JS de Vite en wp-admin; solo `public/css/style.css` en el iframe (ver `project-structure.mdc` > Block Editor + Vite). Sin eso, ACF/Media Library puede fallar.
+
+2. **Desarrollo con HMR** (recomendado):
+   - Ejecutar `npm run dev` desde el directorio del tema
+   - Editar archivos en `resources/styles/` o `resources/scripts/`
+   - Ver cambios **instantaneamente** sin recargar el navegador
+   - `host.docker.internal` permite al PHP container alcanzar Vite en el host
+
+3. **Compilar**:
+   - `npm run dev` (servidor con HMR)
+   - `npm run build` (compilar una vez)
+   - `npm run watch` (compilar y observar sin HMR)
+   - `npm run production` (build optimizado)
+   - Salida en `public/`
+
+4. **Fuentes**: Vite copia `resources/fonts/*` a `public/fonts/`; `theme.json` usa `file:./public/fonts/`.
+
+5. **No editar a mano** los archivos en `public/`.
+
+## PHP (tema)
+
+1. **Nuevas clases**: Anadir en `includes/`; el autoload (functions.php) las carga. Namespace `__NAMESPACE__\`.
+2. **ACF Blocks**: Crear en `blocks/` con `block.json` + `render.php`.
+
+## Comandos Utiles
+
+```bash
+# Docker
+docker compose up -d          # Levantar todos los servicios
+docker compose down            # Detener todos los servicios
+docker compose logs -f php     # Ver logs de PHP
+docker compose exec php sh     # Shell en contenedor PHP
+
+# Bedrock (desde app/)
+cd app
+composer install               # Instalar WP core + plugins
+composer require wpackagist-plugin/nombre  # Agregar plugin via Composer
+
+# Tema (desde app/web/app/themes/__THEME_SLUG__/)
+cd app/web/app/themes/__THEME_SLUG__
+npm run dev                    # Vite dev server con HMR
+npm run build                  # Compilar una vez
+npm run production             # Build de produccion optimizado
+
+# Remote Sync (desde raiz del proyecto)
+npm run sync                   # Watch + auto-sync a servidor remoto
+npm run sync:push              # Push manual
+npm run sync:pull              # Pull manual
+
+# WordPress CLI (dentro del contenedor)
+docker compose exec php wp plugin list
+docker compose exec php wp cache flush
+docker compose exec php wp db export
+```
+
+## Workflow Recomendado
+
+### Desarrollo Diario
+
+1. **Levantar Docker** (si no esta corriendo):
+   ```bash
+   docker compose up -d
+   ```
+
+2. **Iniciar HMR**:
+   ```bash
+   cd app/web/app/themes/__THEME_SLUG__
+   npm run dev
+   ```
+
+3. **Hacer cambios** en archivos fuente:
+   - `resources/styles/` - Cambios instantaneos con HMR
+   - `resources/scripts/` - Recargas minimas
+   - `includes/` (PHP) - Recargar navegador
+   - Templates - Recargar navegador
+
+4. **Verificar HMR**: Consola del navegador -> `[vite] connected.`
+
+### Agregar un Plugin
+
+```bash
+cd app
+composer require wpackagist-plugin/nombre-del-plugin
+```
+
+El plugin se instala en `app/web/app/plugins/` y queda gitignored (solo el `composer.json` se committea).
+
+### Deployment
+
+1. **Compilar assets para produccion**:
+   ```bash
+   cd app/web/app/themes/__THEME_SLUG__
+   npm run production
+   ```
+
+2. **Instalar dependencias**:
+   ```bash
+   cd app
+   composer install --no-dev --optimize-autoloader
+   ```
+
+3. **Verificar que assets compilados existen**:
+   - `public/css/style.css`
+   - `public/js/main.js`
+   - `public/fonts/*`
+   - `public/manifest.json`
+
+## Troubleshooting
+
+### Docker no levanta
+```bash
+docker compose down -v         # Detener y limpiar volumenes
+docker compose up -d --build   # Reconstruir imagenes
+docker compose logs -f         # Ver logs de todos los servicios
+```
+
+### HMR no funciona
+```bash
+npm run dev
+ls public/hot
+docker compose exec php curl http://host.docker.internal:5173
+```
+
+### Assets no se compilan
+```bash
+rm -rf node_modules package-lock.json
+npm install
+npm run build
+```
+
+### WordPress no reconoce cambios
+```bash
+docker compose exec php wp cache flush
+docker compose exec php wp rewrite flush
+```
