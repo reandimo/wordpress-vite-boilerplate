@@ -106,3 +106,7 @@ If port 80 is taken, change in `docker-compose.yml`:
 ports:
   - "8000:80"   # Use http://localhost:8000 instead
 ```
+
+---
+
+*Part of [WordPress Vite Boilerplate](https://github.com/reandimo/wordpress-vite-boilerplate) by [Renan Diaz](https://reandimo.dev)*

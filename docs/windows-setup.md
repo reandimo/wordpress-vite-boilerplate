@@ -117,3 +117,7 @@ The `.editorconfig` sets `end_of_line = lf` for all files. If you see `\r\n` iss
 ```sh
 git config --global core.autocrlf input
 ```
+
+---
+
+*Part of [WordPress Vite Boilerplate](https://github.com/reandimo/wordpress-vite-boilerplate) by [Renan Diaz](https://reandimo.dev)*

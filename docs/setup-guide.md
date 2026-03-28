@@ -85,3 +85,7 @@ node setup.js
 ```
 
 Note: re-running on an already-configured project will try to replace placeholders that no longer exist. It's designed to run once on a fresh clone.
+
+---
+
+*Part of [WordPress Vite Boilerplate](https://github.com/reandimo/wordpress-vite-boilerplate) by [Renan Diaz](https://reandimo.dev)*

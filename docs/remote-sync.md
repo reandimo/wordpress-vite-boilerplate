@@ -159,3 +159,7 @@ export PATH="/c/ProgramData/chocolatey/bin:$PATH"
 - SSH (rsync) is significantly faster than FTP since it only transfers changes
 - For FTP, consider excluding large directories: `SYNC_EXCLUDE=.git,node_modules,public/fonts`
 - On Windows, polling mode checks every 2 seconds — this is normal
+
+---
+
+*Part of [WordPress Vite Boilerplate](https://github.com/reandimo/wordpress-vite-boilerplate) by [Renan Diaz](https://reandimo.dev)*

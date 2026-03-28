@@ -13,7 +13,7 @@ All other dependencies are checked automatically by the setup script.
 
 ```sh
 # 1. Clone the repo
-git clone https://github.com/your-user/wordpress-vite-boilerplate.git my-project
+git clone https://github.com/reandimo/wordpress-vite-boilerplate.git my-project
 cd my-project
 
 # 2. Run the interactive setup
@@ -97,6 +97,10 @@ app/web/app/themes/<theme>/
 ├── vite.config.js           # Vite 5 + HMR
 └── functions.php            # PSR-4 autoloader + bootstrap
 ```
+
+## Author
+
+Created by **Renan Diaz** — [reandimo.dev](https://reandimo.dev)
 
 ## License
 

@@ -6,6 +6,8 @@
  * Configures theme name, namespace, dev mode, and optional features.
  * Detects OS, checks dependencies, and auto-configures everything.
  * Run: node setup.js
+ *
+ * @author Renan Diaz <https://reandimo.dev>
  */
 
 import { createInterface } from 'readline';

@@ -208,3 +208,7 @@ See `blocks/example-cta/` for a complete working example with heading, descripti
 4. Use BEM naming for CSS classes
 5. Use `"mode": "preview"` for better editor UX
 6. Use semantic HTML (`<section>`, `<article>`, etc.)
+
+---
+
+*Part of [WordPress Vite Boilerplate](https://github.com/reandimo/wordpress-vite-boilerplate) by [Renan Diaz](https://reandimo.dev)*

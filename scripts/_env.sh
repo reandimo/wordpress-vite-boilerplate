@@ -2,6 +2,7 @@
 # Shared environment for sync scripts.
 # Safely loads .env (handles passwords with special chars) and extends
 # PATH on Windows so tools installed via Chocolatey/Scoop are found.
+# @author Renan Diaz <https://reandimo.dev>
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="$SCRIPT_DIR/../.env"

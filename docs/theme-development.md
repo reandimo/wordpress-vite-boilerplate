@@ -167,3 +167,7 @@ Design tokens are defined in two places:
 - **`resources/styles/base/_variables.scss`**: Same values as SCSS variables for use in custom styles
 
 Keep them in sync when changing design tokens.
+
+---
+
+*Part of [WordPress Vite Boilerplate](https://github.com/reandimo/wordpress-vite-boilerplate) by [Renan Diaz](https://reandimo.dev)*
