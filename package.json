@@ -1,6 +1,7 @@
 {
   "name": "__PROJECT_SLUG__",
   "private": true,
+  "type": "module",
   "description": "WordPress Bedrock + Vite boilerplate",
   "scripts": {
     "setup": "node setup.js",
