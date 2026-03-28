@@ -88,12 +88,20 @@ if [ -n "${REMOTE_HOST:-}" ] && [ -n "${REMOTE_USER:-}" ]; then
     REMOTE_PORT="${REMOTE_PORT:-$([ "$SYNC_PROTOCOL" = "ftp" ] && echo 21 || echo 22)}"
 
     if [ "$SYNC_PROTOCOL" = "ftp" ]; then
-        echo "Testing FTP connection to $REMOTE_USER@$REMOTE_HOST:$REMOTE_PORT..."
+        echo "Testing FTP connection to $REMOTE_HOST:$REMOTE_PORT (user: $REMOTE_USER)..."
         if command -v lftp &>/dev/null; then
-            if lftp -u "$REMOTE_USER","${REMOTE_PASSWORD:-}" -p "$REMOTE_PORT" "$REMOTE_HOST" -e "ls; quit" &>/dev/null; then
+            FTP_OUTPUT=$(lftp -u "$REMOTE_USER","${REMOTE_PASSWORD:-}" -p "$REMOTE_PORT" "$REMOTE_HOST" -e "set ssl:verify-certificate no; set net:timeout 10; set net:max-retries 1; ls; quit" 2>&1) && FTP_OK=true || FTP_OK=false
+            if [ "$FTP_OK" = "true" ]; then
                 echo "[OK] FTP connection successful"
             else
-                echo "[FAIL] Cannot connect via FTP. Check host, user, password, and port."
+                echo "[FAIL] Cannot connect via FTP."
+                echo "  Error: $FTP_OUTPUT"
+                echo ""
+                echo "  Check:"
+                echo "    - Host: $REMOTE_HOST"
+                echo "    - Port: $REMOTE_PORT"
+                echo "    - User: $REMOTE_USER"
+                echo "    - Password is set in .env (REMOTE_PASSWORD)"
             fi
         else
             echo "[SKIP] lftp not installed — cannot test FTP connection"

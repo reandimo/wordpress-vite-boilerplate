@@ -26,15 +26,18 @@ if [ -f "$ENV_FILE" ]; then
     while IFS= read -r line || [ -n "$line" ]; do
         # Skip empty lines and comments
         [[ -z "$line" || "$line" == \#* ]] && continue
-        # Extract key=value, strip surrounding quotes from value
+        # Extract key=value, strip matching surrounding quotes from value
         if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*) ]]; then
             key="${BASH_REMATCH[1]}"
             val="${BASH_REMATCH[2]}"
-            # Remove surrounding quotes (single or double)
-            val="${val%\"}"
-            val="${val#\"}"
-            val="${val%\'}"
-            val="${val#\'}"
+            # Strip Windows carriage return
+            val="${val//$'\r'/}"
+            # Remove matching surrounding quotes (single or double)
+            if [[ "$val" =~ ^\"(.*)\"$ ]]; then
+                val="${BASH_REMATCH[1]}"
+            elif [[ "$val" =~ ^\'(.*)\'$ ]]; then
+                val="${BASH_REMATCH[1]}"
+            fi
             export "$key=$val"
         fi
     done < "$ENV_FILE"
