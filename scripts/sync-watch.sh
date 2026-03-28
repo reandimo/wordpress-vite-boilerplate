@@ -1,18 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Load environment variables
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="$SCRIPT_DIR/../.env"
+source "$SCRIPT_DIR/_env.sh"
 
 if [ ! -f "$ENV_FILE" ]; then
-    echo "Error: .env file not found at $ENV_FILE"
-    echo "Copy .env.example to .env and fill in the remote sync settings."
+    echo "Error: .env file not found. Copy .env.example to .env first."
     exit 1
 fi
-
-# shellcheck source=/dev/null
-source "$ENV_FILE"
 
 # Validate required vars
 for var in REMOTE_USER REMOTE_HOST REMOTE_THEME_PATH; do

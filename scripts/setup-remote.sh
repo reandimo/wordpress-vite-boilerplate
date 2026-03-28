@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_env.sh"
+
 echo "Checking remote sync dependencies..."
 echo ""
 
@@ -11,6 +14,13 @@ if command -v rsync &>/dev/null; then
     echo "[OK] rsync $(rsync --version 2>&1 | head -1)"
 else
     echo "[MISSING] rsync — required for file sync"
+    if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
+        echo "  Install: choco install rsync  (run PowerShell as Admin, then restart terminal)"
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        echo "  Install: brew install rsync"
+    else
+        echo "  Install: sudo apt install rsync"
+    fi
     MISSING=1
 fi
 
@@ -57,31 +67,23 @@ fi
 
 # Test SSH connection
 echo ""
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="$SCRIPT_DIR/../.env"
-
-if [ -f "$ENV_FILE" ]; then
-    # shellcheck source=/dev/null
-    source "$ENV_FILE"
-    if [ -n "${REMOTE_HOST:-}" ] && [ -n "${REMOTE_USER:-}" ]; then
-        REMOTE_PORT="${REMOTE_PORT:-22}"
-        echo "Testing SSH connection to $REMOTE_USER@$REMOTE_HOST:$REMOTE_PORT..."
-        if ssh -p "$REMOTE_PORT" -o ConnectTimeout=5 "$REMOTE_USER@$REMOTE_HOST" "echo 'SSH connection OK'" 2>/dev/null; then
-            echo "[OK] SSH connection successful"
-        else
-            echo "[FAIL] Cannot connect. Ensure your SSH key is set up:"
-            echo "  ssh-copy-id -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST"
-        fi
+if [ -n "${REMOTE_HOST:-}" ] && [ -n "${REMOTE_USER:-}" ]; then
+    REMOTE_PORT="${REMOTE_PORT:-22}"
+    echo "Testing SSH connection to $REMOTE_USER@$REMOTE_HOST:$REMOTE_PORT..."
+    if ssh -p "$REMOTE_PORT" -o ConnectTimeout=5 -o BatchMode=yes "$REMOTE_USER@$REMOTE_HOST" "echo 'SSH connection OK'" 2>/dev/null; then
+        echo "[OK] SSH connection successful"
     else
-        echo "REMOTE_HOST or REMOTE_USER not set in .env — skipping SSH test"
+        echo "[FAIL] Cannot connect. Ensure your SSH key is set up:"
+        echo "  ssh-keygen -t ed25519  (if you don't have a key)"
+        echo "  ssh-copy-id -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST"
     fi
 else
-    echo ".env file not found — skipping SSH test"
+    echo "REMOTE_HOST or REMOTE_USER not set in .env — skipping SSH test"
 fi
 
 echo ""
 if [ "$MISSING" -eq 0 ]; then
-    echo "All required dependencies are installed."
+    echo "All required dependencies are installed. Ready to sync!"
 else
     echo "Some dependencies are missing. Install them and run this script again."
     exit 1

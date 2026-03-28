@@ -2,15 +2,12 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="$SCRIPT_DIR/../.env"
+source "$SCRIPT_DIR/_env.sh"
 
 if [ ! -f "$ENV_FILE" ]; then
     echo "Error: .env file not found. Copy .env.example to .env first."
     exit 1
 fi
-
-# shellcheck source=/dev/null
-source "$ENV_FILE"
 
 REMOTE_PORT="${REMOTE_PORT:-22}"
 SYNC_EXCLUDE="${SYNC_EXCLUDE:-.git,node_modules,.DS_Store,*.log,.env,public/hot}"

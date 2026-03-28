@@ -75,6 +75,16 @@ function commandExists(cmd) {
     execSync(check, { stdio: 'pipe' });
     return true;
   } catch {
+    // On Windows, also check common tool paths not in PATH
+    if (OS === 'windows') {
+      const winPaths = [
+        `C:\\ProgramData\\chocolatey\\bin\\${cmd}.exe`,
+        `C:\\ProgramData\\chocolatey\\lib\\${cmd}\\tools\\bin\\${cmd}.exe`,
+        join(process.env.USERPROFILE || '', 'scoop', 'shims', `${cmd}.exe`),
+        `C:\\Program Files\\Git\\usr\\bin\\${cmd}.exe`,
+      ];
+      return winPaths.some(p => existsSync(p));
+    }
     return false;
   }
 }
