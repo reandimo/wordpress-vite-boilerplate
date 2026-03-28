@@ -2,6 +2,22 @@
 
 **WordPress Bedrock + Docker + Vite** boilerplate with interactive setup, Block Theme (FSE), ACF Blocks v3, TypeScript, SCSS, and remote sync (SSH or FTP).
 
+## Why?
+
+Shopify developers run `shopify theme dev` and get instant local-to-server sync, hot reload, and a modern stack out of the box. WordPress developers? We get FTP clients from 2005, manual uploads, and prayer-based deployments.
+
+This boilerplate closes that gap. Edit your theme locally with **Vite HMR**, auto-sync to your staging server (or production if you're brave) via **rsync or FTP**, and develop with a real stack: TypeScript, SCSS, Docker, Bedrock, ACF Blocks. One `node setup.js` and you're running.
+
+| Classic WP workflow | With this boilerplate |
+|--------------------|-----------------------|
+| Edit via FTP client or cPanel editor | Edit locally, auto-sync to server |
+| No HMR, manual refresh | Vite HMR — instant CSS updates |
+| Vanilla CSS / jQuery spaghetti | TypeScript + SCSS + BEM |
+| No version control structure | Bedrock + Docker + Composer |
+| "It works on my machine" | Works everywhere, same config |
+
+Think `shopify theme dev`, but for WordPress.
+
 ## Requirements
 
 - [Node.js](http://nodejs.org/) >= 18

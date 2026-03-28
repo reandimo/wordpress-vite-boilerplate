@@ -1,6 +1,8 @@
 # Remote Sync
 
-Edit theme files locally and auto-sync them to a remote server. Works like Shopify's `theme dev`.
+Edit theme files locally and auto-sync them to a remote server — the same workflow Shopify developers get with `shopify theme dev`, but for WordPress.
+
+No more FTP clients, no more manual uploads. Save a file locally and it's on your server in seconds. Pair it with Vite HMR for instant CSS updates and you have a modern development experience on any hosting.
 
 ## Protocols
 
