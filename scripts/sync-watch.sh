@@ -15,10 +15,14 @@ fi
 ui_banner "Sync Watch" "Watching for changes..."
 
 ui_section "Connection" "🔗"
-ui_key_value "Theme:" "${C_BRIGHT_WHITE}${C_BOLD}$THEME_SLUG${C_RESET}"
-ui_key_value "Protocol:" "${C_BRIGHT_CYAN}$SYNC_PROTOCOL${C_RESET}"
+ui_key_value "Theme:" "$THEME_SLUG"
+ui_key_value "Protocol:" "$SYNC_PROTOCOL"
 ui_key_value "Target:" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_THEME_PATH"
-ui_key_value "Delete:" "$([ "$SYNC_DELETE" = "true" ] && echo -e "${C_RED}${C_BOLD}ON${C_RESET}" || echo -e "${C_GREEN}off${C_RESET}")"
+if [ "$SYNC_DELETE" = "true" ]; then
+    printf "  %s%-14s%s %s%sON%s\n" "$C_DIM" "Delete:" "$C_RESET" "$C_RED" "$C_BOLD" "$C_RESET"
+else
+    printf "  %s%-14s%s %soff%s\n" "$C_DIM" "Delete:" "$C_RESET" "$C_GREEN" "$C_RESET"
+fi
 
 # Detect watcher
 WATCHER="polling"
@@ -35,12 +39,12 @@ ui_key_value "Watcher:" "$WATCHER"
 ui_section "Sync Log" "📡"
 
 # ── Initial sync ─────────────────────────────────────────────
-echo -e "  ${C_BRIGHT_YELLOW}●${C_RESET} Initial sync..."
+printf "  %s●%s Initial sync...\n" "$C_BRIGHT_YELLOW" "$C_RESET"
 sync_push
 
 echo ""
-echo -e "  ${C_GREEN}${C_BOLD}👀 Watching for changes...${C_RESET} ${C_DIM}(Ctrl+C to stop)${C_RESET}"
-echo -e "  ${C_DIM}$(printf '─%.0s' $(seq 1 50))${C_RESET}"
+printf "  %s%s👀 Watching for changes...%s %s(Ctrl+C to stop)%s\n" "$C_GREEN" "$C_BOLD" "$C_RESET" "$C_DIM" "$C_RESET"
+ui_divider
 
 # ── Watch loop ───────────────────────────────────────────────
 case "$WATCHER" in
@@ -60,7 +64,7 @@ case "$WATCHER" in
         done
         ;;
     polling)
-        echo -e "  ${C_DIM}Polling every 2s...${C_RESET}"
+        printf "  %sPolling every 2s...%s\n" "$C_DIM" "$C_RESET"
         while true; do
             sleep 2
             sync_push

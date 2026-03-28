@@ -14,11 +14,15 @@ fi
 ui_banner "Sync Push" "Uploading theme to remote server"
 
 ui_section "Details" "📦"
-ui_key_value "Theme:" "${C_BRIGHT_WHITE}${C_BOLD}$THEME_SLUG${C_RESET}"
-ui_key_value "Protocol:" "${C_BRIGHT_CYAN}$SYNC_PROTOCOL${C_RESET}"
+ui_key_value "Theme:" "$THEME_SLUG"
+ui_key_value "Protocol:" "$SYNC_PROTOCOL"
 ui_key_value "Target:" "$REMOTE_USER@$REMOTE_HOST"
 ui_key_value "Path:" "$REMOTE_THEME_PATH"
-ui_key_value "Delete:" "$([ "$SYNC_DELETE" = "true" ] && echo -e "${C_RED}${C_BOLD}ON${C_RESET}" || echo -e "${C_GREEN}off${C_RESET}")"
+if [ "$SYNC_DELETE" = "true" ]; then
+    printf "  %s%-14s%s %s%sON%s\n" "$C_DIM" "Delete:" "$C_RESET" "$C_RED" "$C_BOLD" "$C_RESET"
+else
+    printf "  %s%-14s%s %soff%s\n" "$C_DIM" "Delete:" "$C_RESET" "$C_GREEN" "$C_RESET"
+fi
 
 ui_section "Upload" "↑"
 sync_push

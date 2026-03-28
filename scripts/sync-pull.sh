@@ -14,8 +14,8 @@ fi
 ui_banner "Sync Pull" "Downloading theme from remote server"
 
 ui_section "Details" "📦"
-ui_key_value "Theme:" "${C_BRIGHT_WHITE}${C_BOLD}$THEME_SLUG${C_RESET}"
-ui_key_value "Protocol:" "${C_BRIGHT_CYAN}$SYNC_PROTOCOL${C_RESET}"
+ui_key_value "Theme:" "$THEME_SLUG"
+ui_key_value "Protocol:" "$SYNC_PROTOCOL"
 ui_key_value "Source:" "$REMOTE_USER@$REMOTE_HOST"
 ui_key_value "Path:" "$REMOTE_THEME_PATH"
 
