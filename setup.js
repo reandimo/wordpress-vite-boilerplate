@@ -122,7 +122,7 @@ function getGitBashPath() {
 /**
  * @returns {{ name: string, status: 'ok'|'missing'|'warn', version?: string, hint?: string }[]}
  */
-function checkDependencies(devMode) {
+function checkDependencies(devMode, syncProtocol = 'ssh') {
   const deps = [];
 
   // -- Always needed --
@@ -164,28 +164,38 @@ function checkDependencies(devMode) {
 
   // -- Remote sync mode --
   if (devMode === 'remote-sync' || devMode === 'both') {
-    // rsync
-    if (commandExists('rsync')) {
-      deps.push({ name: 'rsync', status: 'ok', version: getCommandVersion('rsync') });
-    } else if (OS === 'windows' && checkGitBashRsync()) {
-      deps.push({ name: 'rsync', status: 'ok', version: 'via Git Bash' });
-    } else {
-      deps.push({
-        name: 'rsync',
-        status: 'missing',
-        hint: OS === 'windows'
-          ? 'choco install rsync  OR  install Git for Windows (includes rsync in usr/bin)'
-          : OS === 'macos'
-            ? 'brew install rsync'
-            : 'sudo apt install rsync',
-      });
-    }
 
-    deps.push(checkDep('ssh', 'ssh', '-V', {
-      windows: 'Included with Windows 10+. Enable in Settings > Apps > Optional Features.',
-      macos: 'Pre-installed on macOS.',
-      linux: 'sudo apt install openssh-client',
-    }));
+    if (syncProtocol === 'ftp') {
+      // FTP mode: lftp
+      deps.push(checkDep('lftp', 'lftp', '--version', {
+        windows: 'choco install lftp',
+        macos: 'brew install lftp',
+        linux: 'sudo apt install lftp',
+      }));
+    } else {
+      // SSH mode: rsync + ssh
+      if (commandExists('rsync')) {
+        deps.push({ name: 'rsync', status: 'ok', version: getCommandVersion('rsync') });
+      } else if (OS === 'windows' && checkGitBashRsync()) {
+        deps.push({ name: 'rsync', status: 'ok', version: 'via Git Bash' });
+      } else {
+        deps.push({
+          name: 'rsync',
+          status: 'missing',
+          hint: OS === 'windows'
+            ? 'choco install rsync'
+            : OS === 'macos'
+              ? 'brew install rsync'
+              : 'sudo apt install rsync',
+        });
+      }
+
+      deps.push(checkDep('ssh', 'ssh', '-V', {
+        windows: 'Included with Windows 10+. Enable in Settings > Apps > Optional Features.',
+        macos: 'Pre-installed on macOS.',
+        linux: 'sudo apt install openssh-client',
+      }));
+    }
 
     // File watcher (optional, polling fallback on Windows)
     if (OS === 'macos') {
@@ -484,16 +494,30 @@ async function main() {
       projectSlug = await prompt(rl, 'Docker project prefix', themeSlug);
     }
 
+    let syncProtocol = 'ssh';
     let remotePort = '22';
+    let remotePassword = '';
     let syncDelete = false;
 
     if (devMode === 'remote-sync' || devMode === 'both') {
       console.log('');
       printSection('Remote Server', '🌐');
+      console.log(`  ${c.dim}ssh  ${c.reset}rsync over SSH (fast, secure, requires SSH access)`);
+      console.log(`  ${c.dim}ftp  ${c.reset}lftp mirror (works with any FTP/SFTP hosting)`);
+      console.log('');
+      syncProtocol = await promptChoice(rl, 'Sync protocol', ['ssh', 'ftp'], 'ssh');
       remoteHost = await prompt(rl, 'Remote host (e.g. myserver.com)', '');
-      remoteUser = await prompt(rl, 'Remote SSH user', '');
-      remotePort = await prompt(rl, 'SSH port', '22');
-      remoteThemePath = await prompt(rl, 'Remote theme path', `/var/www/html/wp-content/themes/${themeSlug}`);
+      remoteUser = await prompt(rl, 'Remote user', '');
+
+      if (syncProtocol === 'ftp') {
+        remotePassword = await prompt(rl, 'FTP password', '');
+        remotePort = await prompt(rl, 'FTP port', '21');
+        remoteThemePath = await prompt(rl, 'Remote theme path', `/wp-content/themes/${themeSlug}`);
+      } else {
+        remotePort = await prompt(rl, 'SSH port', '22');
+        remoteThemePath = await prompt(rl, 'Remote theme path', `/var/www/html/wp-content/themes/${themeSlug}`);
+      }
+
       syncDelete = await promptYesNo(rl, 'Delete remote files not present locally?', 'n');
       if (syncDelete) {
         printWarn(`${c.dim}Files deleted locally will also be deleted on the remote server.${c.reset}`);
@@ -513,7 +537,7 @@ async function main() {
 
     await animateSpinner('Scanning installed tools...', 600);
 
-    const deps = checkDependencies(devMode);
+    const deps = checkDependencies(devMode, syncProtocol);
     let hasMissing = false;
     let hasWarning = false;
 
@@ -545,7 +569,7 @@ async function main() {
     console.log(`  ${c.dim}Theme:${c.reset}        ${c.bold}${c.brightWhite}${themeName}${c.reset} ${c.dim}(${themeSlug})${c.reset}`);
     console.log(`  ${c.dim}Namespace:${c.reset}    ${c.bold}${c.brightCyan}${namespace}\\${c.reset}`);
     console.log(`  ${c.dim}Author:${c.reset}       ${authorName || c.dim + 'not set' + c.reset}`);
-    console.log(`  ${c.dim}Dev mode:${c.reset}     ${c.bold}${devMode}${c.reset}`);
+    console.log(`  ${c.dim}Dev mode:${c.reset}     ${c.bold}${devMode}${c.reset}${(devMode !== 'docker') ? ` ${c.dim}(${syncProtocol})${c.reset}` : ''}`);
     console.log(`  ${c.dim}WooCommerce:${c.reset}  ${includeWoo ? c.green + '✓ Yes' : c.dim + '✗ No'}${c.reset}`);
     console.log(`  ${c.dim}ACF Blocks:${c.reset}   ${includeACF ? c.green + '✓ Yes' : c.dim + '✗ No'}${c.reset}`);
     console.log(`  ${c.dim}Platform:${c.reset}     ${OS_LABELS[OS]}`);
@@ -634,15 +658,26 @@ async function main() {
       const envPath = join(ROOT, '.env.example');
       if (existsSync(envPath)) {
         let env = readFileSync(envPath, 'utf8');
+        env = env.replace('# SYNC_PROTOCOL=ssh', `SYNC_PROTOCOL=${syncProtocol}`);
         if (remoteHost) env = env.replace('# REMOTE_HOST=servidor.com', `REMOTE_HOST=${remoteHost}`);
         if (remoteUser) env = env.replace('# REMOTE_USER=usuario', `REMOTE_USER=${remoteUser}`);
         env = env.replace('# REMOTE_PORT=22', `REMOTE_PORT=${remotePort}`);
-        if (remoteThemePath) env = env.replace(`# REMOTE_THEME_PATH=/var/www/html/wp-content/themes/${themeSlug}`, `REMOTE_THEME_PATH=${remoteThemePath}`);
+        if (remoteThemePath) {
+          const defaultPath = syncProtocol === 'ftp'
+            ? `/wp-content/themes/${themeSlug}`
+            : `/var/www/html/wp-content/themes/${themeSlug}`;
+          env = env.replace(`# REMOTE_THEME_PATH=${defaultPath}`, `REMOTE_THEME_PATH=${remoteThemePath}`);
+          // Fallback if default path didn't match template
+          env = env.replace(/# REMOTE_THEME_PATH=.*/, `REMOTE_THEME_PATH=${remoteThemePath}`);
+        }
+        if (syncProtocol === 'ftp' && remotePassword) {
+          env = env.replace('# REMOTE_PASSWORD=', `REMOTE_PASSWORD=${remotePassword}`);
+        }
         env = env.replace('# SYNC_EXCLUDE=', 'SYNC_EXCLUDE=');
-        env = env.replace('# SYNC_DELETE=true', `SYNC_DELETE=${syncDelete}`);
+        env = env.replace('# SYNC_DELETE=false', `SYNC_DELETE=${syncDelete}`);
         writeFileSync(envPath, env, 'utf8');
       }
-      printSuccess('Remote sync configured in .env.example');
+      printSuccess(`Remote sync configured in .env.example (${syncProtocol})`);
     }
 
     // Step 7: WooCommerce

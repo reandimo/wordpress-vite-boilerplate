@@ -4,54 +4,71 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_env.sh"
 
+SYNC_PROTOCOL="${SYNC_PROTOCOL:-ssh}"
+
 echo "Checking remote sync dependencies..."
+echo "Protocol: $SYNC_PROTOCOL"
 echo ""
 
 MISSING=0
 
-# Check rsync
-if command -v rsync &>/dev/null; then
-    echo "[OK] rsync $(rsync --version 2>&1 | head -1)"
-else
-    echo "[MISSING] rsync — required for file sync"
-    if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
-        echo "  Install: choco install rsync  (run PowerShell as Admin, then restart terminal)"
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        echo "  Install: brew install rsync"
+if [ "$SYNC_PROTOCOL" = "ftp" ]; then
+    # FTP mode: lftp
+    if command -v lftp &>/dev/null; then
+        echo "[OK] lftp $(lftp --version 2>&1 | head -1)"
     else
-        echo "  Install: sudo apt install rsync"
+        echo "[MISSING] lftp — required for FTP sync"
+        if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
+            echo "  Install: choco install lftp"
+        elif [[ "$OSTYPE" == "darwin"* ]]; then
+            echo "  Install: brew install lftp"
+        else
+            echo "  Install: sudo apt install lftp"
+        fi
+        MISSING=1
     fi
-    MISSING=1
-fi
-
-# Check SSH
-if command -v ssh &>/dev/null; then
-    echo "[OK] ssh"
 else
-    echo "[MISSING] ssh — required for remote connection"
-    MISSING=1
+    # SSH mode: rsync + ssh
+    if command -v rsync &>/dev/null; then
+        echo "[OK] rsync $(rsync --version 2>&1 | head -1)"
+    else
+        echo "[MISSING] rsync — required for SSH sync"
+        if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
+            echo "  Install: choco install rsync"
+        elif [[ "$OSTYPE" == "darwin"* ]]; then
+            echo "  Install: brew install rsync"
+        else
+            echo "  Install: sudo apt install rsync"
+        fi
+        MISSING=1
+    fi
+
+    if command -v ssh &>/dev/null; then
+        echo "[OK] ssh"
+    else
+        echo "[MISSING] ssh — required for remote connection"
+        MISSING=1
+    fi
 fi
 
-# Check file watcher
+# File watcher
 if [[ "$OSTYPE" == "darwin"* ]]; then
     if command -v fswatch &>/dev/null; then
         echo "[OK] fswatch"
     else
-        echo "[MISSING] fswatch — install with: brew install fswatch"
-        MISSING=1
+        echo "[WARN] fswatch not found — install with: brew install fswatch (falls back to polling)"
     fi
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     if command -v inotifywait &>/dev/null; then
         echo "[OK] inotifywait"
     else
-        echo "[MISSING] inotify-tools — install with: sudo apt install inotify-tools"
-        MISSING=1
+        echo "[WARN] inotify-tools not found — install with: sudo apt install inotify-tools (falls back to polling)"
     fi
 else
-    echo "[INFO] Windows detected — sync-watch will use polling mode"
+    echo "[INFO] Windows — sync-watch uses polling mode"
 fi
 
-# Check tunnel tools (optional)
+# Tunnel tools (optional)
 echo ""
 echo "Optional tunnel tools:"
 if command -v cloudflared &>/dev/null; then
@@ -65,20 +82,34 @@ else
     echo "[--] ngrok not installed (optional)"
 fi
 
-# Test SSH connection
+# Test connection
 echo ""
 if [ -n "${REMOTE_HOST:-}" ] && [ -n "${REMOTE_USER:-}" ]; then
-    REMOTE_PORT="${REMOTE_PORT:-22}"
-    echo "Testing SSH connection to $REMOTE_USER@$REMOTE_HOST:$REMOTE_PORT..."
-    if ssh -p "$REMOTE_PORT" -o ConnectTimeout=5 -o BatchMode=yes "$REMOTE_USER@$REMOTE_HOST" "echo 'SSH connection OK'" 2>/dev/null; then
-        echo "[OK] SSH connection successful"
+    REMOTE_PORT="${REMOTE_PORT:-$([ "$SYNC_PROTOCOL" = "ftp" ] && echo 21 || echo 22)}"
+
+    if [ "$SYNC_PROTOCOL" = "ftp" ]; then
+        echo "Testing FTP connection to $REMOTE_USER@$REMOTE_HOST:$REMOTE_PORT..."
+        if command -v lftp &>/dev/null; then
+            if lftp -u "$REMOTE_USER","${REMOTE_PASSWORD:-}" -p "$REMOTE_PORT" "$REMOTE_HOST" -e "ls; quit" &>/dev/null; then
+                echo "[OK] FTP connection successful"
+            else
+                echo "[FAIL] Cannot connect via FTP. Check host, user, password, and port."
+            fi
+        else
+            echo "[SKIP] lftp not installed — cannot test FTP connection"
+        fi
     else
-        echo "[FAIL] Cannot connect. Ensure your SSH key is set up:"
-        echo "  ssh-keygen -t ed25519  (if you don't have a key)"
-        echo "  ssh-copy-id -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST"
+        echo "Testing SSH connection to $REMOTE_USER@$REMOTE_HOST:$REMOTE_PORT..."
+        if ssh -p "$REMOTE_PORT" -o ConnectTimeout=5 -o BatchMode=yes "$REMOTE_USER@$REMOTE_HOST" "echo 'SSH connection OK'" 2>/dev/null; then
+            echo "[OK] SSH connection successful"
+        else
+            echo "[FAIL] Cannot connect via SSH. Ensure your SSH key is set up:"
+            echo "  ssh-keygen -t ed25519  (if you don't have a key)"
+            echo "  ssh-copy-id -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST"
+        fi
     fi
 else
-    echo "REMOTE_HOST or REMOTE_USER not set in .env — skipping SSH test"
+    echo "REMOTE_HOST or REMOTE_USER not set in .env — skipping connection test"
 fi
 
 echo ""
