@@ -4,12 +4,15 @@
  * WordPress Vite Boilerplate — Interactive Setup
  *
  * Configures theme name, namespace, dev mode, and optional features.
+ * Detects OS, checks dependencies, and auto-configures everything.
  * Run: node setup.js
  */
 
 import { createInterface } from 'readline';
 import { readFileSync, writeFileSync, renameSync, rmSync, mkdirSync, readdirSync, statSync, existsSync } from 'fs';
 import { join, resolve, extname } from 'path';
+import { execSync } from 'child_process';
+import { platform } from 'os';
 
 const ROOT = resolve(import.meta.dirname || process.cwd());
 
@@ -23,8 +26,6 @@ const c = {
   dim: '\x1b[2m',
   italic: '\x1b[3m',
   underline: '\x1b[4m',
-
-  // Foreground
   black: '\x1b[30m',
   red: '\x1b[31m',
   green: '\x1b[32m',
@@ -33,8 +34,6 @@ const c = {
   magenta: '\x1b[35m',
   cyan: '\x1b[36m',
   white: '\x1b[37m',
-
-  // Bright foreground
   brightBlack: '\x1b[90m',
   brightRed: '\x1b[91m',
   brightGreen: '\x1b[92m',
@@ -43,14 +42,188 @@ const c = {
   brightMagenta: '\x1b[95m',
   brightCyan: '\x1b[96m',
   brightWhite: '\x1b[97m',
-
-  // Background
-  bgBlue: '\x1b[44m',
-  bgMagenta: '\x1b[45m',
-  bgCyan: '\x1b[46m',
-  bgWhite: '\x1b[47m',
-  bgBrightBlack: '\x1b[100m',
 };
+
+// ---------------------------------------------------------------------------
+// OS Detection
+// ---------------------------------------------------------------------------
+
+function detectOS() {
+  const p = platform();
+  if (p === 'win32') return 'windows';
+  if (p === 'darwin') return 'macos';
+  return 'linux';
+}
+
+const OS = detectOS();
+
+const OS_LABELS = {
+  windows: `${c.cyan}Windows${c.reset}`,
+  macos: `${c.brightWhite}macOS${c.reset}`,
+  linux: `${c.yellow}Linux${c.reset}`,
+};
+
+// ---------------------------------------------------------------------------
+// Dependency checking
+// ---------------------------------------------------------------------------
+
+function commandExists(cmd) {
+  try {
+    const check = OS === 'windows'
+      ? `where ${cmd} 2>nul`
+      : `command -v ${cmd} 2>/dev/null`;
+    execSync(check, { stdio: 'pipe' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function getCommandVersion(cmd, flag = '--version') {
+  try {
+    const out = execSync(`${cmd} ${flag} 2>&1`, { stdio: 'pipe', encoding: 'utf8' });
+    // Extract first line, trim, take first meaningful part
+    const line = out.trim().split('\n')[0];
+    // Try to extract version number
+    const match = line.match(/(\d+\.\d+[\.\d]*)/);
+    return match ? match[1] : line.slice(0, 40);
+  } catch {
+    return null;
+  }
+}
+
+function checkGitBashRsync() {
+  if (OS !== 'windows') return false;
+  const gitBashPaths = [
+    'C:\\Program Files\\Git\\usr\\bin\\rsync.exe',
+    'C:\\Program Files (x86)\\Git\\usr\\bin\\rsync.exe',
+  ];
+  return gitBashPaths.some(p => existsSync(p));
+}
+
+function getGitBashPath() {
+  const paths = [
+    'C:\\Program Files\\Git\\bin\\bash.exe',
+    'C:\\Program Files (x86)\\Git\\bin\\bash.exe',
+  ];
+  return paths.find(p => existsSync(p)) || null;
+}
+
+/**
+ * @returns {{ name: string, status: 'ok'|'missing'|'warn', version?: string, hint?: string }[]}
+ */
+function checkDependencies(devMode) {
+  const deps = [];
+
+  // -- Always needed --
+  deps.push(checkDep('node', 'node', '-v', null));
+  deps.push(checkDep('npm', 'npm', '-v', null));
+
+  // -- Docker mode --
+  if (devMode === 'docker' || devMode === 'both') {
+    deps.push(checkDep('docker', 'docker', '-v', {
+      windows: 'Install Docker Desktop: https://www.docker.com/products/docker-desktop/',
+      macos: 'brew install --cask docker',
+      linux: 'curl -fsSL https://get.docker.com | sh',
+    }));
+
+    // docker compose (v2 plugin)
+    const composeExists = (() => {
+      try {
+        execSync('docker compose version 2>&1', { stdio: 'pipe' });
+        return true;
+      } catch { return false; }
+    })();
+    if (composeExists) {
+      const ver = getCommandVersion('docker compose', 'version');
+      deps.push({ name: 'docker compose', status: 'ok', version: ver });
+    } else {
+      deps.push({
+        name: 'docker compose',
+        status: 'missing',
+        hint: 'Included with Docker Desktop. Update Docker if missing.',
+      });
+    }
+
+    deps.push(checkDep('composer', 'composer', '-V', {
+      windows: 'Install: https://getcomposer.org/download/ or choco install composer',
+      macos: 'brew install composer',
+      linux: 'curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer',
+    }));
+  }
+
+  // -- Remote sync mode --
+  if (devMode === 'remote-sync' || devMode === 'both') {
+    // rsync
+    if (commandExists('rsync')) {
+      deps.push({ name: 'rsync', status: 'ok', version: getCommandVersion('rsync') });
+    } else if (OS === 'windows' && checkGitBashRsync()) {
+      deps.push({ name: 'rsync', status: 'ok', version: 'via Git Bash' });
+    } else {
+      deps.push({
+        name: 'rsync',
+        status: 'missing',
+        hint: OS === 'windows'
+          ? 'choco install rsync  OR  install Git for Windows (includes rsync in usr/bin)'
+          : OS === 'macos'
+            ? 'brew install rsync'
+            : 'sudo apt install rsync',
+      });
+    }
+
+    deps.push(checkDep('ssh', 'ssh', '-V', {
+      windows: 'Included with Windows 10+. Enable in Settings > Apps > Optional Features.',
+      macos: 'Pre-installed on macOS.',
+      linux: 'sudo apt install openssh-client',
+    }));
+
+    // File watcher (optional, polling fallback on Windows)
+    if (OS === 'macos') {
+      deps.push(checkDep('fswatch', 'fswatch', '--version', {
+        macos: 'brew install fswatch',
+      }));
+    } else if (OS === 'linux') {
+      if (commandExists('inotifywait')) {
+        deps.push({ name: 'inotifywait', status: 'ok', version: getCommandVersion('inotifywait') });
+      } else {
+        deps.push({
+          name: 'inotifywait',
+          status: 'warn',
+          hint: 'sudo apt install inotify-tools  (falls back to polling without it)',
+        });
+      }
+    } else {
+      deps.push({ name: 'file watcher', status: 'warn', hint: 'Windows uses polling mode (no extra install needed)' });
+    }
+
+    // Tunnel tools (optional)
+    const hasCloudflared = commandExists('cloudflared');
+    const hasNgrok = commandExists('ngrok');
+    if (hasCloudflared || hasNgrok) {
+      const tool = hasCloudflared ? 'cloudflared' : 'ngrok';
+      deps.push({ name: `tunnel (${tool})`, status: 'ok', version: getCommandVersion(tool) });
+    } else {
+      deps.push({
+        name: 'tunnel (optional)',
+        status: 'warn',
+        hint: 'Install cloudflared or ngrok for public tunnels. Not required.',
+      });
+    }
+  }
+
+  return deps;
+}
+
+function checkDep(name, cmd, versionFlag, installHints) {
+  if (commandExists(cmd)) {
+    return { name, status: 'ok', version: getCommandVersion(cmd, versionFlag) };
+  }
+  return {
+    name,
+    status: 'missing',
+    hint: installHints ? (installHints[OS] || Object.values(installHints)[0]) : null,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Visual helpers
@@ -120,6 +293,14 @@ function printSection(title, icon = '◆') {
 
 function printSuccess(text) {
   console.log(`  ${c.green}${c.bold}✓${c.reset} ${text}`);
+}
+
+function printWarn(text) {
+  console.log(`  ${c.yellow}${c.bold}⚠${c.reset} ${text}`);
+}
+
+function printFail(text) {
+  console.log(`  ${c.red}${c.bold}✗${c.reset} ${text}`);
 }
 
 function printInfo(text) {
@@ -202,13 +383,13 @@ function promptYesNo(rl, question, defaultValue = 'n') {
 const TEXT_EXTENSIONS = new Set([
   '.php', '.js', '.ts', '.scss', '.css', '.json', '.html', '.md', '.mdc',
   '.yml', '.yaml', '.xml', '.txt', '.sh', '.env', '.editorconfig',
-  '.gitignore', '.htaccess', '.conf',
+  '.gitignore', '.htaccess', '.conf', '.npmrc',
 ]);
 
 function isTextFile(filePath) {
   const ext = extname(filePath).toLowerCase();
   const basename = filePath.split(/[\\/]/).pop();
-  if (basename === '.env.example' || basename === '.gitignore' || basename === '.editorconfig') return true;
+  if (['.env.example', '.gitignore', '.editorconfig', '.npmrc'].includes(basename)) return true;
   return TEXT_EXTENSIONS.has(ext);
 }
 
@@ -256,6 +437,12 @@ function removeIfExists(path) {
 async function main() {
   printBanner();
 
+  // ── System Detection ────────────────────────────────────────
+  printSection('System Detection', '🔍');
+  console.log(`  ${c.dim}OS:${c.reset}   ${OS_LABELS[OS]}`);
+  console.log(`  ${c.dim}Node:${c.reset} ${c.brightWhite}${getCommandVersion('node', '-v') || 'unknown'}${c.reset}`);
+  console.log(`  ${c.dim}npm:${c.reset}  ${c.brightWhite}${getCommandVersion('npm', '-v') || 'unknown'}${c.reset}`);
+
   const rl = createInterface({ input: process.stdin, output: process.stdout });
 
   try {
@@ -290,7 +477,7 @@ async function main() {
     if (devMode === 'remote-sync' || devMode === 'both') {
       console.log('');
       printSection('Remote Server', '🌐');
-      remoteHost = await prompt(rl, 'Remote host', '');
+      remoteHost = await prompt(rl, 'Remote host (e.g. myserver.com)', '');
       remoteUser = await prompt(rl, 'Remote SSH user', '');
       remoteThemePath = await prompt(rl, 'Remote theme path', `/var/www/html/wp-content/themes/${themeSlug}`);
     }
@@ -302,7 +489,39 @@ async function main() {
 
     rl.close();
 
-    // ── Summary before proceeding ───────────────────────────────
+    // ── Dependency Check ────────────────────────────────────────
+    printSection('Checking Dependencies', '🔧');
+    console.log('');
+
+    await animateSpinner('Scanning installed tools...', 600);
+
+    const deps = checkDependencies(devMode);
+    let hasMissing = false;
+    let hasWarning = false;
+
+    for (const dep of deps) {
+      if (dep.status === 'ok') {
+        const ver = dep.version ? ` ${c.dim}(${dep.version})${c.reset}` : '';
+        printSuccess(`${dep.name}${ver}`);
+      } else if (dep.status === 'warn') {
+        printWarn(`${dep.name} ${c.dim}— ${dep.hint}${c.reset}`);
+        hasWarning = true;
+      } else {
+        printFail(`${dep.name} ${c.red}not found${c.reset}`);
+        if (dep.hint) {
+          console.log(`    ${c.dim}Install: ${c.reset}${c.yellow}${dep.hint}${c.reset}`);
+        }
+        hasMissing = true;
+      }
+    }
+
+    if (hasMissing) {
+      console.log('');
+      printWarn(`Some required tools are missing. The project will be configured,`);
+      printWarn(`but you'll need to install them before running.`);
+    }
+
+    // ── Summary ─────────────────────────────────────────────────
     printSection('Review', '📋');
     console.log('');
     console.log(`  ${c.dim}Theme:${c.reset}        ${c.bold}${c.brightWhite}${themeName}${c.reset} ${c.dim}(${themeSlug})${c.reset}`);
@@ -311,6 +530,7 @@ async function main() {
     console.log(`  ${c.dim}Dev mode:${c.reset}     ${c.bold}${devMode}${c.reset}`);
     console.log(`  ${c.dim}WooCommerce:${c.reset}  ${includeWoo ? c.green + '✓ Yes' : c.dim + '✗ No'}${c.reset}`);
     console.log(`  ${c.dim}ACF Blocks:${c.reset}   ${includeACF ? c.green + '✓ Yes' : c.dim + '✗ No'}${c.reset}`);
+    console.log(`  ${c.dim}Platform:${c.reset}     ${OS_LABELS[OS]}`);
     console.log('');
 
     // ── Execute ─────────────────────────────────────────────────
@@ -342,7 +562,6 @@ async function main() {
     };
 
     let filesChanged = 0;
-    let totalReplacements = 0;
 
     await animateProgress('Replacing placeholders', 25, 1500);
 
@@ -352,10 +571,6 @@ async function main() {
       }
     });
 
-    // Count total replacements for display
-    for (const val of Object.values(replacements)) {
-      if (val) totalReplacements++;
-    }
     printSuccess(`Updated ${c.bold}${filesChanged}${c.reset} files with your configuration`);
 
     // Step 3: Update .gitignore
@@ -366,7 +581,22 @@ async function main() {
       writeFileSync(gitignorePath, gi, 'utf8');
     }
 
-    // Step 4: Dev mode cleanup
+    // Step 4: Windows — create .npmrc for Git Bash shell
+    if (OS === 'windows') {
+      await animateSpinner('Configuring npm for Windows (Git Bash)...', 300);
+      const gitBash = getGitBashPath();
+      if (gitBash) {
+        const npmrcPath = join(ROOT, '.npmrc');
+        const escaped = gitBash.replace(/\\/g, '\\\\');
+        writeFileSync(npmrcPath, `script-shell=${escaped}\n`, 'utf8');
+        printSuccess(`Created .npmrc → scripts use Git Bash`);
+      } else {
+        printWarn('Git Bash not found. npm scripts using bash may not work in PowerShell.');
+        printInfo('Install Git for Windows: https://git-scm.com/download/win');
+      }
+    }
+
+    // Step 5: Dev mode cleanup
     if (devMode === 'remote-sync') {
       await animateSpinner('Removing Docker files (remote-sync mode)...', 300);
       removeIfExists(join(ROOT, 'docker-compose.yml'));
@@ -380,7 +610,7 @@ async function main() {
       printSuccess('Sync scripts removed (not needed for docker mode)');
     }
 
-    // Step 5: Remote sync env
+    // Step 6: Remote sync env
     if (devMode === 'remote-sync' || devMode === 'both') {
       await animateSpinner('Configuring remote sync...', 300);
       const envPath = join(ROOT, '.env.example');
@@ -396,7 +626,7 @@ async function main() {
       printSuccess('Remote sync configured in .env.example');
     }
 
-    // Step 6: WooCommerce
+    // Step 7: WooCommerce
     if (includeWoo) {
       await animateSpinner('Adding WooCommerce to dependencies...', 300);
       const composerPath = join(ROOT, 'app', 'composer.json');
@@ -408,7 +638,7 @@ async function main() {
       printSuccess('WooCommerce added to app/composer.json');
     }
 
-    // Step 7: ACF cleanup
+    // Step 8: ACF cleanup
     if (!includeACF) {
       await animateSpinner('Removing ACF block system...', 300);
       removeIfExists(join(themeDir, 'blocks'));
@@ -437,7 +667,7 @@ async function main() {
       printSuccess('ACF blocks removed (vanilla WordPress blocks only)');
     }
 
-    // Step 8: Self-destruct
+    // Step 9: Self-destruct
     await animateSpinner('Cleaning up setup files...', 300);
     const backupDir = join(ROOT, '.setup-backup');
     mkdirSync(backupDir, { recursive: true });
@@ -478,6 +708,12 @@ async function main() {
       printStep(`${c.dim}cp .env.example .env${c.reset}  ${c.brightBlack}# verify remote settings${c.reset}`);
       printStep(`${c.dim}npm run setup:remote${c.reset}  ${c.brightBlack}# check deps + SSH${c.reset}`);
       printStep(`${c.dim}npm run sync${c.reset}          ${c.brightBlack}# start watching + syncing${c.reset}`);
+    }
+
+    if (hasMissing) {
+      console.log('');
+      console.log(`  ${c.yellow}${c.bold}⚠  Missing dependencies detected above.${c.reset}`);
+      console.log(`  ${c.dim}Install them before running the project.${c.reset}`);
     }
 
     console.log('');
