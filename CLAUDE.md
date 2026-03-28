@@ -8,7 +8,6 @@ Proyecto **WordPress Bedrock** con **Docker** y tema Block Theme (FSE). El tema 
 project/
 ├── docker-compose.yml           # Docker: PHP-FPM, Nginx, MariaDB, MailHog, phpMyAdmin
 ├── docker/                      # Dockerfiles y configs
-├── scripts/                     # Remote sync scripts (rsync/SSH)
 ├── setup.js                     # Interactive setup (run once, then deleted)
 ├── app/                         # Bedrock application root
 │   ├── composer.json            # Bedrock deps (WP core, plugins via wpackagist)
@@ -56,10 +55,10 @@ npm run build                     # Build once
 npm run production                # Optimized build
 composer install                  # Theme PHP deps
 
-# Remote sync (from project root)
-npm run sync                      # Watch + auto-sync to remote
-npm run sync:push                 # Manual push
-npm run sync:pull                 # Manual pull
+# Remote sync — powered by wp-dev-sync (from project root)
+npm run sync                      # Watch + auto-sync to remote (wp-dev-sync watch)
+npm run sync:push                 # Manual push (wp-dev-sync push)
+npm run sync:pull                 # Manual pull (wp-dev-sync pull)
 
 # WordPress CLI
 docker compose exec php wp cache flush
@@ -179,4 +178,4 @@ Estructura: `blocks/nombre/block.json` + `blocks/nombre/render.php`
 - **ACF Pro**: Field groups en `includes/ACF/`, blocks en `blocks/`
 - **Vite 5**: Build tool con HMR, `vite-plugin-static-copy` para fuentes
 - **Composer PSR-4**: `__NAMESPACE__\` a `includes/`
-- **Remote Sync**: rsync/SSH scripts en `scripts/` para sync con servidor remoto
+- **Remote Sync**: wp-dev-sync CLI para sync con servidor remoto (SSH/FTP)

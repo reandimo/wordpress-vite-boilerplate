@@ -660,23 +660,17 @@ async function main() {
       const envPath = join(ROOT, '.env.example');
       if (existsSync(envPath)) {
         let env = readFileSync(envPath, 'utf8');
-        env = env.replace('# SYNC_PROTOCOL=ssh', `SYNC_PROTOCOL=${syncProtocol}`);
-        if (remoteHost) env = env.replace('# REMOTE_HOST=servidor.com', `REMOTE_HOST=${remoteHost}`);
-        if (remoteUser) env = env.replace('# REMOTE_USER=usuario', `REMOTE_USER=${remoteUser}`);
-        env = env.replace('# REMOTE_PORT=22', `REMOTE_PORT=${remotePort}`);
+        env = env.replace(/SYNC_PROTOCOL=.*/, `SYNC_PROTOCOL=${syncProtocol}`);
+        if (remoteHost) env = env.replace(/REMOTE_HOST=.*/, `REMOTE_HOST=${remoteHost}`);
+        if (remoteUser) env = env.replace(/REMOTE_USER=.*/, `REMOTE_USER=${remoteUser}`);
+        env = env.replace(/REMOTE_PORT=.*/, `REMOTE_PORT=${remotePort}`);
         if (remoteThemePath) {
-          const defaultPath = syncProtocol === 'ftp'
-            ? `/wp-content/themes/${themeSlug}`
-            : `/var/www/html/wp-content/themes/${themeSlug}`;
-          env = env.replace(`# REMOTE_THEME_PATH=${defaultPath}`, `REMOTE_THEME_PATH=${remoteThemePath}`);
-          // Fallback if default path didn't match template
-          env = env.replace(/# REMOTE_THEME_PATH=.*/, `REMOTE_THEME_PATH=${remoteThemePath}`);
+          env = env.replace(/REMOTE_PATH=.*/, `REMOTE_PATH=${remoteThemePath}`);
         }
         if (syncProtocol === 'ftp' && remotePassword) {
-          env = env.replace('# REMOTE_PASSWORD=', `REMOTE_PASSWORD=${remotePassword}`);
+          env = env.replace(/REMOTE_PASSWORD=\s*$/, `REMOTE_PASSWORD=${remotePassword}`);
         }
-        env = env.replace('# SYNC_EXCLUDE=', 'SYNC_EXCLUDE=');
-        env = env.replace('# SYNC_DELETE=false', `SYNC_DELETE=${syncDelete}`);
+        env = env.replace(/SYNC_DELETE=.*/, `SYNC_DELETE=${syncDelete}`);
         writeFileSync(envPath, env, 'utf8');
       }
       printSuccess(`Remote sync configured in .env.example (${syncProtocol})`);

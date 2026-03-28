@@ -1,5 +1,7 @@
 # Setup Guide
 
+This boilerplate brings the `shopify theme dev` experience to WordPress — edit locally, auto-sync to your server, with Vite HMR, TypeScript, SCSS, and Docker. The setup script configures everything in one interactive session.
+
 ## Running the Setup
 
 ```sh

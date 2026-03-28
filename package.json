@@ -5,14 +5,15 @@
   "description": "WordPress Bedrock + Vite boilerplate",
   "scripts": {
     "setup": "node setup.js",
-    "sync": "bash scripts/sync-watch.sh",
-    "sync:push": "bash scripts/sync-push.sh",
-    "sync:pull": "bash scripts/sync-pull.sh",
-    "tunnel": "bash scripts/tunnel.sh",
+    "sync": "wp-dev-sync watch",
+    "sync:push": "wp-dev-sync push",
+    "sync:pull": "wp-dev-sync pull",
+    "tunnel": "wp-dev-sync tunnel",
     "sync:tunnel": "concurrently \"npm run sync\" \"npm run tunnel\"",
-    "setup:remote": "bash scripts/setup-remote.sh"
+    "setup:remote": "wp-dev-sync setup"
   },
   "devDependencies": {
-    "concurrently": "^9.0.0"
+    "concurrently": "^9.0.0",
+    "wp-dev-sync": "file:../wp-sync"
   }
 }
