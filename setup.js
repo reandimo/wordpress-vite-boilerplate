@@ -484,12 +484,20 @@ async function main() {
       projectSlug = await prompt(rl, 'Docker project prefix', themeSlug);
     }
 
+    let remotePort = '22';
+    let syncDelete = false;
+
     if (devMode === 'remote-sync' || devMode === 'both') {
       console.log('');
       printSection('Remote Server', '🌐');
       remoteHost = await prompt(rl, 'Remote host (e.g. myserver.com)', '');
       remoteUser = await prompt(rl, 'Remote SSH user', '');
+      remotePort = await prompt(rl, 'SSH port', '22');
       remoteThemePath = await prompt(rl, 'Remote theme path', `/var/www/html/wp-content/themes/${themeSlug}`);
+      syncDelete = await promptYesNo(rl, 'Delete remote files not present locally?', 'n');
+      if (syncDelete) {
+        printWarn(`${c.dim}Files deleted locally will also be deleted on the remote server.${c.reset}`);
+      }
     }
 
     // ── Features ────────────────────────────────────────────────
@@ -628,9 +636,10 @@ async function main() {
         let env = readFileSync(envPath, 'utf8');
         if (remoteHost) env = env.replace('# REMOTE_HOST=servidor.com', `REMOTE_HOST=${remoteHost}`);
         if (remoteUser) env = env.replace('# REMOTE_USER=usuario', `REMOTE_USER=${remoteUser}`);
+        env = env.replace('# REMOTE_PORT=22', `REMOTE_PORT=${remotePort}`);
         if (remoteThemePath) env = env.replace(`# REMOTE_THEME_PATH=/var/www/html/wp-content/themes/${themeSlug}`, `REMOTE_THEME_PATH=${remoteThemePath}`);
         env = env.replace('# SYNC_EXCLUDE=', 'SYNC_EXCLUDE=');
-        env = env.replace('# SYNC_DELETE=', 'SYNC_DELETE=');
+        env = env.replace('# SYNC_DELETE=true', `SYNC_DELETE=${syncDelete}`);
         writeFileSync(envPath, env, 'utf8');
       }
       printSuccess('Remote sync configured in .env.example');
