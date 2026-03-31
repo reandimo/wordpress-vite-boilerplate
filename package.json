@@ -10,10 +10,12 @@
     "sync:pull": "wp-dev-sync pull",
     "tunnel": "wp-dev-sync tunnel",
     "sync:tunnel": "concurrently \"npm run sync\" \"npm run tunnel\"",
-    "setup:remote": "wp-dev-sync setup"
+    "setup:remote": "wp-dev-sync setup",
+    "diff": "wp-dev-sync diff",
+    "env-list": "wp-dev-sync env list"
   },
   "devDependencies": {
     "concurrently": "^9.0.0",
-    "wp-dev-sync": "file:../wp-sync"
+    "wp-dev-sync": "^1.1.1"
   }
 }
